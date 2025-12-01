@@ -1980,7 +1980,10 @@ function initPlasticPayment() {
     }
     
     disableButton(paymentBtn, true);
-    paymentBtn.textContent = "Обробка оплати...";
+    var btnContent = paymentBtn.querySelector("div");
+    if (btnContent) {
+      btnContent.textContent = "Обробка оплати...";
+    }
     
     processCity24Payment(orderData, function(paymentResult) {
       if (paymentResult && paymentResult.success) {
@@ -1992,9 +1995,10 @@ function initPlasticPayment() {
           successStep.classList.add("is-active");
           
           setTimeout(function() {
-            if (successStep.querySelector(".modal-relink-text a")) {
+            var link = successStep.querySelector(".modal-relink-text a");
+            if (link) {
               var redirectUrl = "https://city24.ua/payment/success?orderId=" + paymentResult.orderId;
-              successStep.querySelector(".modal-relink-text a").href = redirectUrl;
+              link.href = redirectUrl;
             }
           }, 0);
         }
@@ -2007,7 +2011,9 @@ function initPlasticPayment() {
           errorStep.classList.add("is-active");
         }
         disableButton(paymentBtn, false);
-        paymentBtn.textContent = "Оплатити";
+        if (btnContent) {
+          btnContent.textContent = "Оплатити";
+        }
       }
     });
   });
