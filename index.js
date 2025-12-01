@@ -56,6 +56,12 @@ function normalizeUaPhoneDigits(v) {
   return digits;
 }
 
+function isValidUaPhoneDigits(digits) {
+  // допустимые украинские мобильные коды операторов:
+  // 39, 50, 63, 66, 67, 68, 73, 89, 91–99
+  return /^380(39|50|63|66|67|68|73|89|9[1-9])\d{7}$/.test(digits);
+}
+
 function formatUaPhoneVisual(digits) {
   digits = normalizeUaPhoneDigits(digits);
   var rest = digits.slice(3);
@@ -75,11 +81,10 @@ function bindPhoneMask(input) {
   input.value = initial.visual;
 
   function syncFromValue() {
-    var digits = normalizeUaPhoneDigits(input.value);
-    var fmt = formatUaPhoneVisual(digits);
+    var fmt = formatUaPhoneVisual(input.value);
     input.dataset.phoneDigits = fmt.fullDigits;
     input.value = fmt.visual;
-    if (fmt.fullDigits.length === 12) {
+    if (isValidUaPhoneDigits(fmt.fullDigits)) {
       input.classList.add("is-validated");
       input.classList.remove("error");
     } else {
@@ -109,7 +114,7 @@ function getPhoneDigits(input) {
 }
 
 function isFullUaPhone(input) {
-  return getPhoneDigits(input).length === 12;
+  return isValidUaPhoneDigits(getPhoneDigits(input));
 }
 
 function initModalSystem() {
@@ -597,6 +602,7 @@ function npFetchJson(url) {
 async function npLoadAllCities() {
   var select = document.getElementById("City");
   if (!select) return;
+  if (select.dataset.loading === "1") return;
   var phOpt = select.querySelector("option[value='']") || select.options[0];
   var phText = phOpt ? phOpt.textContent : "Введіть назву міста";
   select.innerHTML = "";
@@ -604,6 +610,7 @@ async function npLoadAllCities() {
   ph.value = "";
   ph.textContent = phText;
   select.appendChild(ph);
+  select.dataset.loading = "1";
   var page = 1;
   var limit = 100;
   while (true) {
@@ -629,12 +636,14 @@ async function npLoadAllCities() {
     if (data.payload.length < limit) break;
     page++;
   }
+  delete select.dataset.loading;
 }
 
 async function npLoadAllStreets() {
   if (!npState.cityId) return;
   var select = document.getElementById("Address");
   if (!select) return;
+  if (select.dataset.loading === "1") return;
   var phOpt = select.querySelector("option[value='']") || select.options[0];
   var phText = phOpt ? phOpt.textContent : "Введіть адресу";
   select.innerHTML = "";
@@ -642,6 +651,7 @@ async function npLoadAllStreets() {
   ph.value = "";
   ph.textContent = phText;
   select.appendChild(ph);
+  select.dataset.loading = "1";
   var page = 1;
   var limit = 100;
   while (true) {
@@ -668,12 +678,14 @@ async function npLoadAllStreets() {
     if (data.payload.length < limit) break;
     page++;
   }
+  delete select.dataset.loading;
 }
 
 async function npLoadAllBranches() {
   if (!npState.cityId) return;
   var select = document.getElementById("Department");
   if (!select) return;
+  if (select.dataset.loading === "1") return;
   var phOpt = select.querySelector("option[value='']") || select.options[0];
   var phText = phOpt
     ? phOpt.textContent
@@ -683,6 +695,7 @@ async function npLoadAllBranches() {
   ph.value = "";
   ph.textContent = phText;
   select.appendChild(ph);
+  select.dataset.loading = "1";
   var page = 1;
   var limit = 100;
   while (true) {
@@ -709,6 +722,7 @@ async function npLoadAllBranches() {
     if (data.payload.length < limit) break;
     page++;
   }
+  delete select.dataset.loading;
 }
 
 function initNovaPostSelects() {
