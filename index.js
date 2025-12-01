@@ -600,9 +600,17 @@ function npFetchJson(url) {
 }
 
 async function npLoadAllCities() {
+  console.log("[NovaPoshta] npLoadAllCities: starting...");
   var select = document.getElementById("City");
-  if (!select) return;
-  if (select.dataset.loading === "1") return;
+  if (!select) {
+    console.warn("[NovaPoshta] npLoadAllCities: City select not found!");
+    return;
+  }
+  if (select.dataset.loading === "1") {
+    console.log("[NovaPoshta] npLoadAllCities: already loading, skipping");
+    return;
+  }
+  console.log("[NovaPoshta] npLoadAllCities: City select found, starting load");
   var phOpt = select.querySelector("option[value='']") || select.options[0];
   var phText = phOpt ? phOpt.textContent : "Введіть назву міста";
   select.innerHTML = "";
@@ -620,13 +628,14 @@ async function npLoadAllCities() {
     var params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
+    var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
+    console.log("[NovaPoshta] npLoadAllCities: fetching page", page, "from", url);
     var data;
     try {
-      data = await npFetchJson(
-        API_BASE + "/delivery/novaPost/cities?" + params.toString()
-      );
+      data = await npFetchJson(url);
+      console.log("[NovaPoshta] npLoadAllCities: received response for page", page, ":", data);
     } catch (e) {
-      console.error("NovaPoshta cities error:", e);
+      console.error("[NovaPoshta] npLoadAllCities: error on page", page, ":", e);
       break;
     }
     
@@ -634,15 +643,22 @@ async function npLoadAllCities() {
     var items = null;
     if (Array.isArray(data)) {
       items = data;
+      console.log("[NovaPoshta] npLoadAllCities: data is array, items count:", items.length);
     } else if (data && Array.isArray(data.payload)) {
       items = data.payload;
+      console.log("[NovaPoshta] npLoadAllCities: data.payload found, items count:", items.length, "meta:", data.meta);
     } else if (data && Array.isArray(data.data)) {
       items = data.data;
+      console.log("[NovaPoshta] npLoadAllCities: data.data found, items count:", items.length);
     } else if (data && data.items && Array.isArray(data.items)) {
       items = data.items;
+      console.log("[NovaPoshta] npLoadAllCities: data.items found, items count:", items.length);
+    } else {
+      console.warn("[NovaPoshta] npLoadAllCities: unknown data format:", data);
     }
     
     if (!items || !items.length) {
+      console.log("[NovaPoshta] npLoadAllCities: no items found, stopping");
       hasMore = false;
       break;
     }
@@ -655,7 +671,7 @@ async function npLoadAllCities() {
     });
     
     totalLoaded += items.length;
-    console.log("NovaPoshta cities: loaded page", page, "-", items.length, "items (total:", totalLoaded, ")");
+    console.log("[NovaPoshta] npLoadAllCities: loaded page", page, "-", items.length, "items (total:", totalLoaded, ")");
     
     // Проверка наличия следующей страницы
     var totalPages = null;
@@ -666,20 +682,26 @@ async function npLoadAllCities() {
       totalPages = data.meta.totalPages;
       currentPage = data.meta.currentPage || data.meta.page;
       totalCount = data.meta.totalCount || data.meta.total;
+      console.log("[NovaPoshta] npLoadAllCities: meta found - totalPages:", totalPages, "currentPage:", currentPage, "totalCount:", totalCount);
     } else if (data.pagination) {
       totalPages = data.pagination.totalPages;
       currentPage = data.pagination.currentPage || data.pagination.page;
       totalCount = data.pagination.totalCount || data.pagination.total;
+      console.log("[NovaPoshta] npLoadAllCities: pagination found - totalPages:", totalPages, "currentPage:", currentPage, "totalCount:", totalCount);
+    } else {
+      console.log("[NovaPoshta] npLoadAllCities: no meta/pagination found, using fallback logic");
     }
     
     if (totalPages !== null && typeof totalPages === "number") {
       if (page >= totalPages) {
+        console.log("[NovaPoshta] npLoadAllCities: reached totalPages (", totalPages, "), stopping");
         hasMore = false;
       } else {
         page++;
       }
     } else if (totalCount !== null && typeof totalCount === "number") {
       if (totalLoaded >= totalCount) {
+        console.log("[NovaPoshta] npLoadAllCities: reached totalCount (", totalCount, "), stopping");
         hasMore = false;
       } else {
         page++;
@@ -687,20 +709,22 @@ async function npLoadAllCities() {
     } else {
       // Fallback: если получили меньше элементов, чем лимит, значит это последняя страница
       if (items.length < limit) {
+        console.log("[NovaPoshta] npLoadAllCities: items.length (", items.length, ") < limit (", limit, "), stopping");
         hasMore = false;
       } else {
         // Если получили ровно limit элементов, делаем еще один запрос для проверки
+        console.log("[NovaPoshta] npLoadAllCities: items.length (", items.length, ") == limit (", limit, "), continuing to next page");
         page++;
         // Защита от бесконечного цикла
         if (page > 1000) {
-          console.warn("NovaPoshta cities: reached max pages limit (1000)");
+          console.warn("[NovaPoshta] npLoadAllCities: reached max pages limit (1000)");
           hasMore = false;
         }
       }
     }
   }
   
-  console.log("NovaPoshta cities: finished loading, total cities:", totalLoaded);
+  console.log("[NovaPoshta] npLoadAllCities: finished loading, total cities:", totalLoaded);
   delete select.dataset.loading;
 }
 
@@ -897,19 +921,27 @@ async function npLoadAllBranches() {
 }
 
 function initNovaPostSelects() {
+  console.log("[NovaPoshta] initNovaPostSelects: initializing...");
   var citySelect = document.getElementById("City");
   var addrSelect = document.getElementById("Address");
   var deptSelect = document.getElementById("Department");
 
+  console.log("[NovaPoshta] initNovaPostSelects: citySelect found:", !!citySelect, "addrSelect:", !!addrSelect, "deptSelect:", !!deptSelect);
+
   if (citySelect) {
     // подгружаем города сразу
     if (!citySelect.dataset.loaded) {
+      console.log("[NovaPoshta] initNovaPostSelects: triggering initial city load");
       citySelect.dataset.loaded = "1";
       npLoadAllCities();
+    } else {
+      console.log("[NovaPoshta] initNovaPostSelects: cities already loaded, skipping");
     }
 
     citySelect.addEventListener("focus", function () {
+      console.log("[NovaPoshta] initNovaPostSelects: citySelect focused, loaded:", citySelect.dataset.loaded);
       if (!citySelect.dataset.loaded) {
+        console.log("[NovaPoshta] initNovaPostSelects: triggering city load on focus");
         citySelect.dataset.loaded = "1";
         npLoadAllCities();
       }
@@ -1093,6 +1125,7 @@ function initGlobalPhoneMasks() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+  console.log("[UTM] DOMContentLoaded: initializing all modules...");
   initGlobalPhoneMasks();
   initPlanSelection();
   initTopUpModal();
@@ -1100,5 +1133,6 @@ document.addEventListener("DOMContentLoaded", function () {
   initNovaPostSelects();
   initDeliveryTypeToggle();
   initDeliveryFormValidation();
+  console.log("[UTM] DOMContentLoaded: all modules initialized");
 });
 })();
