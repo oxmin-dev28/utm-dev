@@ -169,6 +169,14 @@ function initModalSystem() {
     dlg.classList.add("is-open");
     document.body.classList.add("modal-open");
     resetSteps(dlg);
+    
+    // Инициализируем NovaPoshta селекты при открытии модального окна с доставкой
+    if (dialogId === "modal-plastic" || dlg.id === "modal-plastic") {
+      console.log("[NovaPoshta] Modal plastic opened, initializing NovaPoshta selects");
+      setTimeout(function() {
+        initNovaPostSelects();
+      }, 100);
+    }
   }
 
   openButtons.forEach(function (btn) {
@@ -504,6 +512,11 @@ function initEsimOrderModal() {
             dialog.classList.remove("is-open");
             plasticDialog.classList.add("is-open");
             modalApi.resetSteps(plasticDialog);
+            // Инициализируем NovaPoshta селекты при открытии модального окна доставки
+            console.log("[NovaPoshta] Plastic delivery modal opened, initializing NovaPoshta selects");
+            setTimeout(function() {
+              initNovaPostSelects();
+            }, 100);
           }
         }
       }
@@ -929,23 +942,32 @@ function initNovaPostSelects() {
   console.log("[NovaPoshta] initNovaPostSelects: citySelect found:", !!citySelect, "addrSelect:", !!addrSelect, "deptSelect:", !!deptSelect);
 
   if (citySelect) {
-    // подгружаем города сразу
-    if (!citySelect.dataset.loaded) {
-      console.log("[NovaPoshta] initNovaPostSelects: triggering initial city load");
-      citySelect.dataset.loaded = "1";
+    // Проверяем, нужно ли загружать города
+    // Если в селекте только placeholder или очень мало опций (< 10), значит нужно загрузить
+    var currentOptionsCount = citySelect.options.length;
+    var hasOnlyPlaceholder = currentOptionsCount <= 1 || (currentOptionsCount === 2 && !citySelect.options[1].value);
+    
+    console.log("[NovaPoshta] initNovaPostSelects: current options count:", currentOptionsCount, "hasOnlyPlaceholder:", hasOnlyPlaceholder);
+    
+    // Загружаем города, если их нет или очень мало (меньше 10)
+    if (hasOnlyPlaceholder || currentOptionsCount < 10) {
+      console.log("[NovaPoshta] initNovaPostSelects: triggering city load (options count:", currentOptionsCount, ")");
+      // Не устанавливаем data-loaded, чтобы можно было перезагрузить при необходимости
       npLoadAllCities();
     } else {
-      console.log("[NovaPoshta] initNovaPostSelects: cities already loaded, skipping");
+      console.log("[NovaPoshta] initNovaPostSelects: cities already loaded (", currentOptionsCount, "options), skipping");
     }
 
-    citySelect.addEventListener("focus", function () {
-      console.log("[NovaPoshta] initNovaPostSelects: citySelect focused, loaded:", citySelect.dataset.loaded);
-      if (!citySelect.dataset.loaded) {
+    // Убираем старые обработчики и добавляем новые
+    citySelect.removeEventListener("focus", citySelect._npFocusHandler);
+    citySelect._npFocusHandler = function () {
+      console.log("[NovaPoshta] initNovaPostSelects: citySelect focused");
+      if (citySelect.dataset.loading !== "1" && (citySelect.options.length <= 1 || citySelect.options.length < 10)) {
         console.log("[NovaPoshta] initNovaPostSelects: triggering city load on focus");
-        citySelect.dataset.loaded = "1";
         npLoadAllCities();
       }
-    });
+    };
+    citySelect.addEventListener("focus", citySelect._npFocusHandler);
 
     citySelect.addEventListener("change", function () {
       npState.cityId = citySelect.value || null;
