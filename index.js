@@ -156,7 +156,15 @@ var restDigits = digits.slice(3);
 input.dataset.phoneDigits = digits;
 input.value = restDigits;
 input.style.color = "transparent";
+input.style.caretColor = "transparent";
 input.style.backgroundColor = "transparent";
+var computedStyle = window.getComputedStyle(input);
+var borderWidth = computedStyle.borderWidth || "1px";
+if (!input.style.borderWidth) {
+  input.style.borderWidth = borderWidth;
+  input.style.borderStyle = computedStyle.borderStyle || "solid";
+  input.style.borderColor = "transparent";
+}
 input.setAttribute("placeholder", "");
 input.setAttribute("maxlength", "9");
 input.setAttribute("inputmode", "tel");
