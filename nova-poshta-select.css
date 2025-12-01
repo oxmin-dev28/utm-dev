@@ -1,0 +1,199 @@
+/* CSS стили для кастомного select с автокомплитом Nova Poshta */
+
+/* Wrapper для кастомного select */
+.np-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Видимый input (выглядит как select) */
+.np-select-display {
+  cursor: pointer;
+  position: relative;
+  padding-right: 30px !important;
+  background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 12 12\'%3E%3Cpath fill=\'%23333\' d=\'M6 9L1 4h10z\'/%3E%3C/svg%3E') !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  background-size: 12px !important;
+  user-select: none;
+}
+
+.np-select-display:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.np-select-display.placeholder {
+  color: #999;
+}
+
+.np-select-display:not(.placeholder) {
+  color: #000;
+}
+
+/* Нативный select (скрыт) */
+.np-select-native {
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 1px !important;
+  height: 1px !important;
+  z-index: -1 !important;
+  left: -9999px !important;
+}
+
+/* Dropdown контейнер */
+.np-select-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 300px;
+  overflow: hidden;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: -1px;
+}
+
+.np-select-wrapper.active .np-select-dropdown {
+  display: block;
+}
+
+.np-select-wrapper.active .np-select-display {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-color: #007bff;
+}
+
+/* Input для поиска внутри dropdown */
+.np-select-search {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 1px solid #eee;
+  outline: none;
+  box-sizing: border-box;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.np-select-search:focus {
+  border-bottom-color: #007bff;
+}
+
+/* Список результатов */
+.np-select-results {
+  max-height: 250px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+/* Элемент результата */
+.np-select-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.np-select-item:last-child {
+  border-bottom: none;
+}
+
+.np-select-item:hover {
+  background-color: #f5f5f5;
+}
+
+.np-select-item.selected {
+  background-color: #e7f3ff;
+  color: #007bff;
+}
+
+/* Сообщение "Завантаження..." */
+.np-select-loading {
+  padding: 12px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+/* Сообщение "Нічого не знайдено" */
+.np-select-no-results {
+  padding: 12px;
+  text-align: center;
+  color: #999;
+}
+
+/* Сообщение об ошибке */
+.np-select-error {
+  padding: 12px;
+  text-align: center;
+  color: #d00;
+}
+
+/* Скроллбар для списка результатов */
+.np-select-results::-webkit-scrollbar {
+  width: 8px;
+}
+
+.np-select-results::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.np-select-results::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.np-select-results::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Анимация появления dropdown */
+.np-select-dropdown {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .np-select-dropdown {
+    max-height: 200px;
+  }
+  
+  .np-select-results {
+    max-height: 150px;
+  }
+  
+  .np-select-item {
+    padding: 10px 12px;
+  }
+}
+
+/* Стили для disabled состояния */
+.np-select-wrapper.disabled .np-select-display {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.np-select-wrapper.disabled .np-select-dropdown {
+  display: none !important;
+}
+

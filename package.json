@@ -1,0 +1,24 @@
+{
+  "name": "utm-dev",
+  "version": "1.0.0",
+  "description": "UTM client-side JavaScript for order forms and NovaPoshta integration",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "node -c index.js",
+    "dev": "npx http-server . -p 8080 -o"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxmin-dev28/utm-dev.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/oxmin-dev28/utm-dev/issues"
+  },
+  "homepage": "https://github.com/oxmin-dev28/utm-dev#readme"
+}

@@ -3,58 +3,58 @@ console.log("[UTM] Script loaded and executing...");
 var API_BASE = "https://api-staging.utm.net.ua";
 
 function qs(sel, root) {
-return (root || document).querySelector(sel);
+  return (root || document).querySelector(sel);
 }
 function qsa(sel, root) {
-return Array.prototype.slice.call((root || document).querySelectorAll(sel));
+  return Array.prototype.slice.call((root || document).querySelectorAll(sel));
 }
 
 function debounce(fn, delay) {
-var t;
-return function () {
-  var ctx = this,
-    args = arguments;
-  clearTimeout(t);
-  t = setTimeout(function () {
-    fn.apply(ctx, args);
-  }, delay);
-};
+  var t;
+  return function () {
+    var ctx = this,
+      args = arguments;
+    clearTimeout(t);
+    t = setTimeout(function () {
+      fn.apply(ctx, args);
+    }, delay);
+  };
 }
 
 function setFieldState(input, valid) {
-if (!input) return;
-input.classList.remove("error", "is-validated");
-if (valid === true) input.classList.add("is-validated");
-if (valid === false) input.classList.add("error");
+  if (!input) return;
+  input.classList.remove("error", "is-validated");
+  if (valid === true) input.classList.add("is-validated");
+  if (valid === false) input.classList.add("error");
 }
 
 function disableButton(btn, disabled) {
-if (!btn) return;
-if (disabled) {
-  btn.setAttribute("disabled", "disabled");
-  btn.classList.add("is-disabled", "disabled");
-} else {
-  btn.removeAttribute("disabled");
-  btn.classList.remove("is-disabled", "disabled");
-}
+  if (!btn) return;
+  if (disabled) {
+    btn.setAttribute("disabled", "disabled");
+    btn.classList.add("is-disabled", "disabled");
+  } else {
+    btn.removeAttribute("disabled");
+    btn.classList.remove("is-disabled", "disabled");
+  }
 }
 
 function isValidEmail(v) {
-return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
 }
 
 function normalizeUaPhoneDigits(v) {
-var digits = String(v || "").replace(/\D/g, "");
-if (!digits.length) digits = "380";
-if (!digits.startsWith("380")) {
-  if (digits.length === 9) digits = "380" + digits;
-  else if (digits.length === 10 && digits[0] === "0")
-    digits = "38" + digits;
-  else digits = "380" + digits.slice(-9);
-}
-if (digits.length > 12) digits = digits.slice(0, 12);
-if (digits.length < 3) digits = "380";
-return digits;
+  var digits = String(v || "").replace(/\D/g, "");
+  if (!digits.length) digits = "380";
+  if (!digits.startsWith("380")) {
+    if (digits.length === 9) digits = "380" + digits;
+    else if (digits.length === 10 && digits[0] === "0")
+      digits = "38" + digits;
+    else digits = "380" + digits.slice(-9);
+  }
+  if (digits.length > 12) digits = digits.slice(0, 12);
+  if (digits.length < 3) digits = "380";
+  return digits;
 }
 
 function isValidUaPhoneDigits(digits) {
@@ -64,54 +64,301 @@ return /^380(39|50|63|66|67|68|73|89|9[1-9])\d{7}$/.test(digits);
 }
 
 function formatUaPhoneVisual(digits) {
-digits = normalizeUaPhoneDigits(digits);
-var rest = digits.slice(3);
-var filled = rest.slice(0, 9);
-var maskCount = 9 - filled.length;
-var mask = "x".repeat(maskCount);
-return {
-  visual: "+380 " + filled + mask,
-  fullDigits: digits,
-};
+  digits = normalizeUaPhoneDigits(digits);
+  var rest = digits.slice(3);
+  var filled = rest.slice(0, 9);
+var prefix = "+380";
+var parts = [];
+if (filled.length > 0) {
+  parts.push("(");
+  parts.push(filled.slice(0, 2));
+  if (filled.length < 2) {
+    parts.push("X".repeat(2 - filled.length));
+  }
+  parts.push(") ");
+  if (filled.length > 2) {
+    parts.push(filled.slice(2, 5));
+    if (filled.length < 5) {
+      parts.push("X".repeat(5 - filled.length));
+    }
+    parts.push("-");
+    if (filled.length > 5) {
+      parts.push(filled.slice(5, 7));
+      if (filled.length < 7) {
+        parts.push("X".repeat(7 - filled.length));
+      }
+      parts.push("-");
+      if (filled.length > 7) {
+        parts.push(filled.slice(7, 9));
+        if (filled.length < 9) {
+          parts.push("X".repeat(9 - filled.length));
+        }
+      } else {
+        parts.push("XX");
+      }
+    } else {
+      parts.push("XX-XX");
+    }
+  } else {
+    parts.push("XXX-XX-XX");
+  }
+} else {
+  parts.push("(XX) XXX-XX-XX");
+}
+  return {
+  prefix: prefix,
+  formatted: parts.join(""),
+  visual: prefix + parts.join(""),
+    fullDigits: digits,
+  };
 }
 
 function bindPhoneMask(input) {
-if (!input) return;
-var initial = formatUaPhoneVisual(input.value || "380");
-input.dataset.phoneDigits = initial.fullDigits;
-input.value = initial.visual;
+  if (!input) return;
 
-function syncFromValue() {
-  var fmt = formatUaPhoneVisual(input.value);
-  input.dataset.phoneDigits = fmt.fullDigits;
-  input.value = fmt.visual;
-  if (isValidUaPhoneDigits(fmt.fullDigits)) {
-    input.classList.add("is-validated");
-    input.classList.remove("error");
-  } else {
-    input.classList.remove("is-validated");
-  }
+var wrapper = input.parentElement;
+if (!wrapper) {
+  console.warn("[PhoneMask] Input parent not found");
+  return;
 }
 
-input.addEventListener("focus", function () {
-  if (!input.dataset.phoneDigits) {
-    var f = formatUaPhoneVisual("380");
-    input.dataset.phoneDigits = f.fullDigits;
-    input.value = f.visual;
+if (wrapper.querySelector(".phone-mask-overlay")) {
+  return;
+}
+
+var overlay = document.createElement("div");
+overlay.className = "phone-mask-overlay";
+var inputStyle = window.getComputedStyle(input);
+overlay.style.cssText = "position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; display: flex; align-items: center; padding-left: " + inputStyle.paddingLeft + "; padding-right: " + inputStyle.paddingRight + "; padding-top: " + inputStyle.paddingTop + "; padding-bottom: " + inputStyle.paddingBottom + "; font-size: " + inputStyle.fontSize + "; font-family: " + inputStyle.fontFamily + "; line-height: " + inputStyle.lineHeight + "; white-space: nowrap; overflow: hidden; box-sizing: border-box; border: 1px solid transparent;";
+wrapper.style.position = "relative";
+
+var prefixSpan = document.createElement("span");
+prefixSpan.style.cssText = "color: #000;";
+var formattedSpan = document.createElement("span");
+formattedSpan.style.cssText = "color: #999;";
+var cursorSpan = document.createElement("span");
+cursorSpan.className = "phone-cursor";
+cursorSpan.style.cssText = "display: inline-block; width: 1px; height: 1em; background-color: #000; margin-left: 1px; vertical-align: baseline; animation: blink 1s infinite;";
+overlay.appendChild(prefixSpan);
+overlay.appendChild(formattedSpan);
+overlay.appendChild(cursorSpan);
+
+var style = document.createElement("style");
+style.textContent = "@keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }";
+document.head.appendChild(style);
+
+var currentValue = input.value || "";
+var digits = normalizeUaPhoneDigits(currentValue);
+var restDigits = digits.slice(3);
+
+input.dataset.phoneDigits = digits;
+input.value = restDigits;
+input.style.color = "transparent";
+input.style.backgroundColor = "transparent";
+input.setAttribute("placeholder", "");
+input.setAttribute("maxlength", "9");
+input.setAttribute("inputmode", "tel");
+input.setAttribute("autocomplete", "off");
+input.setAttribute("autocorrect", "off");
+input.setAttribute("autocapitalize", "off");
+input.setAttribute("spellcheck", "false");
+
+function getCursorPositionInFormatted(inputPos, digits) {
+  var prefix = "+380 ";
+  if (inputPos === 0) {
+    return prefix.length + 1;
+  }
+  var pos = prefix.length + 1;
+  if (inputPos > 0) {
+    pos += Math.min(inputPos, 2);
+    if (inputPos >= 2) {
+      pos += 3;
+      if (inputPos > 2) {
+        pos += Math.min(inputPos - 2, 3);
+        if (inputPos >= 5) {
+          pos += 1;
+          if (inputPos > 5) {
+            pos += Math.min(inputPos - 5, 2);
+            if (inputPos >= 7) {
+              pos += 1;
+              if (inputPos > 7) {
+                pos += Math.min(inputPos - 7, 2);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return pos;
+}
+
+function updateOverlay() {
+  var digits = input.value || "";
+  var fullDigits = "380" + digits;
+  input.dataset.phoneDigits = fullDigits;
+  
+  var fmt = formatUaPhoneVisual(fullDigits);
+  prefixSpan.textContent = fmt.prefix;
+  
+  var cursorPosInFormatted = 0;
+  var isFocused = input === document.activeElement;
+  if (isFocused) {
+    var inputCursorPos = input.selectionStart !== undefined ? input.selectionStart : digits.length;
+    if (inputCursorPos === 0) {
+      cursorPosInFormatted = 0;
+    } else {
+      var fullPos = getCursorPositionInFormatted(inputCursorPos, digits);
+      cursorPosInFormatted = fullPos - fmt.prefix.length;
+    }
+    cursorSpan.style.display = "inline-block";
+  } else {
+    cursorSpan.style.display = "none";
+  }
+  
+  var formattedText = fmt.formatted;
+  var beforeCursor = formattedText.slice(0, cursorPosInFormatted);
+  var afterCursor = formattedText.slice(cursorPosInFormatted);
+  
+  formattedSpan.innerHTML = "";
+  
+  if (beforeCursor) {
+    var beforeSpan = document.createElement("span");
+    beforeSpan.textContent = beforeCursor;
+    beforeSpan.style.color = digits.length > 0 ? "#000" : "#999";
+    formattedSpan.appendChild(beforeSpan);
+  }
+  
+  if (isFocused) {
+    formattedSpan.appendChild(cursorSpan);
+  }
+  
+  if (afterCursor) {
+    var afterSpan = document.createElement("span");
+    afterSpan.textContent = afterCursor;
+    afterSpan.style.color = digits.length > 0 ? "#000" : "#999";
+    formattedSpan.appendChild(afterSpan);
+  }
+  
+  if (isValidUaPhoneDigits(fullDigits)) {
+      input.classList.add("is-validated");
+      input.classList.remove("error");
+    } else {
+      input.classList.remove("is-validated");
+    }
+  }
+
+wrapper.appendChild(overlay);
+updateOverlay();
+
+input.addEventListener("input", function(e) {
+  var value = input.value.replace(/\D/g, "");
+  if (value.length > 9) {
+    value = value.slice(0, 9);
+  }
+  var oldLength = input.value.length;
+  input.value = value;
+  updateOverlay();
+  
+  setTimeout(function() {
+    var cursorPos = value.length;
+    if (input.setSelectionRange) {
+      input.setSelectionRange(cursorPos, cursorPos);
+    }
+    updateOverlay();
+  }, 0);
+});
+
+input.addEventListener("keydown", function(e) {
+  var key = e.key;
+  var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+  var value = input.value || "";
+  
+  if (key === "ArrowLeft" || key === "ArrowRight" || key === "Home" || key === "End") {
+    setTimeout(function() {
+      var newPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+      if (newPos < 0) newPos = 0;
+      if (newPos > value.length) newPos = value.length;
+      if (input.setSelectionRange) {
+        input.setSelectionRange(newPos, newPos);
+      }
+      updateOverlay();
+    }, 0);
   }
 });
 
-input.addEventListener("input", syncFromValue);
-input.addEventListener("change", syncFromValue);
-input.addEventListener("blur", syncFromValue);
+input.addEventListener("keyup", function() {
+  setTimeout(function() {
+    var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+    var value = input.value || "";
+    if (cursorPos < 0) cursorPos = 0;
+    if (cursorPos > value.length) cursorPos = value.length;
+    if (input.setSelectionRange) {
+      input.setSelectionRange(cursorPos, cursorPos);
+    }
+    updateOverlay();
+  }, 0);
+});
+
+input.addEventListener("click", function() {
+  setTimeout(function() {
+    var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+    var value = input.value || "";
+    if (cursorPos < 0) cursorPos = 0;
+    if (cursorPos > value.length) cursorPos = value.length;
+    if (input.setSelectionRange) {
+      input.setSelectionRange(cursorPos, cursorPos);
+    }
+    updateOverlay();
+  }, 0);
+});
+
+input.addEventListener("select", function() {
+  setTimeout(function() {
+    var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+    var value = input.value || "";
+    if (cursorPos < 0) cursorPos = 0;
+    if (cursorPos > value.length) cursorPos = value.length;
+    if (input.setSelectionRange) {
+      input.setSelectionRange(cursorPos, cursorPos);
+    }
+    updateOverlay();
+  }, 0);
+});
+
+input.addEventListener("focus", function() {
+  updateOverlay();
+  setTimeout(function() {
+    var cursorPos = (input.value || "").length;
+    if (input.setSelectionRange) {
+      input.setSelectionRange(cursorPos, cursorPos);
+    }
+    updateOverlay();
+  }, 0);
+});
+
+input.addEventListener("blur", function() {
+  cursorSpan.style.display = "none";
+  updateOverlay();
+});
+
+  input.addEventListener("paste", function(e) {
+    e.preventDefault();
+    var pasted = (e.clipboardData || window.clipboardData).getData("text");
+    var digits = pasted.replace(/\D/g, "").slice(0, 9);
+    input.value = digits;
+    updateOverlay();
+    var event = new Event("input", { bubbles: true });
+    input.dispatchEvent(event);
+  });
 }
 
 function getPhoneDigits(input) {
-if (!input) return "";
-if (input.dataset && input.dataset.phoneDigits) {
-  return normalizeUaPhoneDigits(input.dataset.phoneDigits);
-}
-return normalizeUaPhoneDigits(input.value || "");
+  if (!input) return "";
+  if (input.dataset && input.dataset.phoneDigits) {
+    return normalizeUaPhoneDigits(input.dataset.phoneDigits);
+  }
+  return normalizeUaPhoneDigits(input.value || "");
 }
 
 function isFullUaPhone(input) {
@@ -119,64 +366,64 @@ return isValidUaPhoneDigits(getPhoneDigits(input));
 }
 
 function initModalSystem() {
-var openButtons = qsa("[data-modal-open]");
-var closeSelectors = "[data-modal-close], .modal__overlay";
+  var openButtons = qsa("[data-modal-open]");
+  var closeSelectors = "[data-modal-close], .modal__overlay";
 
-function resetSteps(root) {
-  if (!root) return;
-  var steps = qsa(
-    ".modal-step, .modal-step-esim, .modal-success, .modal-error-esim",
-    root
-  );
-  steps.forEach(function (s) {
-    s.style.display = "none";
-    s.classList.remove("is-active");
-  });
-  var first = qs(
-    ".modal-step.is--1, .modal-step-esim.is--1, .modal-step:first-of-type, .modal-step-esim:first-of-type",
-    root
-  );
-  if (first) {
-    first.style.display = "";
-    first.classList.add("is-active");
+  function resetSteps(root) {
+    if (!root) return;
+    var steps = qsa(
+      ".modal-step, .modal-step-esim, .modal-success, .modal-error-esim",
+      root
+    );
+    steps.forEach(function (s) {
+      s.style.display = "none";
+      s.classList.remove("is-active");
+    });
+    var first = qs(
+      ".modal-step.is--1, .modal-step-esim.is--1, .modal-step:first-of-type, .modal-step-esim:first-of-type",
+      root
+    );
+    if (first) {
+      first.style.display = "";
+      first.classList.add("is-active");
+    }
   }
-}
 
-function closeModal(wrapper) {
-  if (!wrapper) return;
-  wrapper.classList.remove("is-open");
-  wrapper.setAttribute("aria-hidden", "true");
-  qsa(".modal__dialog", wrapper).forEach(function (dlg) {
-    dlg.classList.remove("is-open");
-  });
-  resetSteps(wrapper);
-  if (!document.querySelector(".modal.is-open")) {
-    document.body.classList.remove("modal-open");
+  function closeModal(wrapper) {
+    if (!wrapper) return;
+    wrapper.classList.remove("is-open");
+    wrapper.setAttribute("aria-hidden", "true");
+    qsa(".modal__dialog", wrapper).forEach(function (dlg) {
+      dlg.classList.remove("is-open");
+    });
+    resetSteps(wrapper);
+    if (!document.querySelector(".modal.is-open")) {
+      document.body.classList.remove("modal-open");
+    }
   }
-}
 
-function openModalByDialogId(dialogId) {
+  function openModalByDialogId(dialogId) {
   console.log("[UTM] openModalByDialogId called with:", dialogId);
-  var dlg = document.getElementById(dialogId);
+    var dlg = document.getElementById(dialogId);
   if (!dlg) {
     console.warn("[UTM] Dialog not found:", dialogId);
     return;
   }
-  var wrapper = dlg.closest(".modal");
+    var wrapper = dlg.closest(".modal");
   if (!wrapper) {
     console.warn("[UTM] Modal wrapper not found for dialog:", dialogId);
     return;
   }
 
-  qsa(".modal.is-open").forEach(function (m) {
-    closeModal(m);
-  });
+    qsa(".modal.is-open").forEach(function (m) {
+      closeModal(m);
+    });
 
-  wrapper.classList.add("is-open");
-  wrapper.setAttribute("aria-hidden", "false");
-  dlg.classList.add("is-open");
-  document.body.classList.add("modal-open");
-  resetSteps(dlg);
+    wrapper.classList.add("is-open");
+    wrapper.setAttribute("aria-hidden", "false");
+    dlg.classList.add("is-open");
+    document.body.classList.add("modal-open");
+    resetSteps(dlg);
   
   // Инициализируем NovaPoshta селекты при открытии модального окна с доставкой
   console.log("[UTM] Checking if modal is plastic delivery. dialogId:", dialogId, "dlg.id:", dlg.id);
@@ -195,343 +442,343 @@ function openModalByDialogId(dialogId) {
       }, 100);
     }
   }
-}
-
-openButtons.forEach(function (btn) {
-  btn.addEventListener("click", function (e) {
-    var id = btn.getAttribute("data-modal-open");
-    if (!id) return;
-    e.preventDefault();
-    openModalByDialogId(id);
-  });
-});
-
-document.addEventListener("click", function (e) {
-  var closeEl = e.target.closest(closeSelectors);
-  if (!closeEl) return;
-  var wrapper = closeEl.closest(".modal");
-  if (!wrapper) return;
-  e.preventDefault();
-  closeModal(wrapper);
-});
-
-document.addEventListener("keydown", function (e) {
-  if (e.key === "Escape") {
-    var w = document.querySelector(".modal.is-open");
-    if (w) closeModal(w);
   }
-});
 
-return {
-  openModalByDialogId: openModalByDialogId,
-  closeModal: closeModal,
-  resetSteps: resetSteps,
-};
+  openButtons.forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      var id = btn.getAttribute("data-modal-open");
+      if (!id) return;
+      e.preventDefault();
+      openModalByDialogId(id);
+    });
+  });
+
+  document.addEventListener("click", function (e) {
+    var closeEl = e.target.closest(closeSelectors);
+    if (!closeEl) return;
+    var wrapper = closeEl.closest(".modal");
+    if (!wrapper) return;
+    e.preventDefault();
+    closeModal(wrapper);
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      var w = document.querySelector(".modal.is-open");
+      if (w) closeModal(w);
+    }
+  });
+
+  return {
+    openModalByDialogId: openModalByDialogId,
+    closeModal: closeModal,
+    resetSteps: resetSteps,
+  };
 }
 
 var modalApi = initModalSystem();
 
 function initPlanSelection() {
-var orderState = (window.utmOrderState = window.utmOrderState || {});
-var buttons = qsa('[data-modal-open="modal-order"]');
-buttons.forEach(function (btn) {
-  btn.addEventListener("click", function () {
-    var card =
-      btn.closest(".pricing_slider-slide, .pricing_content") ||
-      btn.closest(".pricing_content");
-    if (!card) return;
-    var nameEl = qs(".pricing_plan-name", card);
-    var priceEl = qs(".pricing_plan-price", card);
-    orderState.planName = nameEl ? nameEl.textContent.trim() : "";
-    orderState.planPrice = priceEl ? priceEl.textContent.trim() : "";
+  var orderState = (window.utmOrderState = window.utmOrderState || {});
+  var buttons = qsa('[data-modal-open="modal-order"]');
+  buttons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var card =
+        btn.closest(".pricing_slider-slide, .pricing_content") ||
+        btn.closest(".pricing_content");
+      if (!card) return;
+      var nameEl = qs(".pricing_plan-name", card);
+      var priceEl = qs(".pricing_plan-price", card);
+      orderState.planName = nameEl ? nameEl.textContent.trim() : "";
+      orderState.planPrice = priceEl ? priceEl.textContent.trim() : "";
+    });
   });
-});
 }
 
 function initTopUpModal() {
-var dialog = document.getElementById("modal-top-up-mobile");
-if (!dialog) return;
+  var dialog = document.getElementById("modal-top-up-mobile");
+  if (!dialog) return;
 
-var stepIntro = qs(".modal-step.is--1", dialog);
-var stepAdd = qs('.modal-step[data-step="add-funds"]', dialog);
-var stepSuccess = qs(".modal-success", dialog);
-var btnHaveNumber = document.getElementById("modalClientButton");
-var backBtn = qs(".modal-form-button", dialog);
-var submitBtn = qs(".button.is-validation", dialog);
-var phoneInput = qs("#phone", dialog);
-var errorMsg = qs("#error-msg", dialog);
+  var stepIntro = qs(".modal-step.is--1", dialog);
+  var stepAdd = qs('.modal-step[data-step="add-funds"]', dialog);
+  var stepSuccess = qs(".modal-success", dialog);
+  var btnHaveNumber = document.getElementById("modalClientButton");
+  var backBtn = qs(".modal-form-button", dialog);
+  var submitBtn = qs(".button.is-validation", dialog);
+  var phoneInput = qs("#phone", dialog);
+  var errorMsg = qs("#error-msg", dialog);
 
-bindPhoneMask(phoneInput);
-disableButton(submitBtn, true);
+  bindPhoneMask(phoneInput);
+  disableButton(submitBtn, true);
 
-function validatePhone() {
-  var ok = isFullUaPhone(phoneInput);
-  if (ok) setFieldState(phoneInput, true);
-  else phoneInput.classList.remove("is-validated", "error");
-  disableButton(submitBtn, !ok);
-  if (errorMsg) errorMsg.classList.add("hide");
-}
-
-if (btnHaveNumber && stepIntro && stepAdd) {
-  btnHaveNumber.addEventListener("click", function (e) {
-    e.preventDefault();
-    stepIntro.style.display = "none";
-    stepIntro.classList.remove("is-active");
-    stepAdd.style.display = "";
-    stepAdd.classList.add("is-active");
-  });
-}
-
-if (backBtn && stepIntro && stepAdd) {
-  backBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    stepAdd.style.display = "none";
-    stepAdd.classList.remove("is-active");
-    stepIntro.style.display = "";
-    stepIntro.classList.add("is-active");
-    phoneInput.value = formatUaPhoneVisual("380").visual;
-    phoneInput.dataset.phoneDigits = "380";
-    phoneInput.classList.remove("error", "is-validated");
-    disableButton(submitBtn, true);
+  function validatePhone() {
+    var ok = isFullUaPhone(phoneInput);
+    if (ok) setFieldState(phoneInput, true);
+    else phoneInput.classList.remove("is-validated", "error");
+    disableButton(submitBtn, !ok);
     if (errorMsg) errorMsg.classList.add("hide");
-  });
-}
+  }
 
-if (phoneInput) {
-  phoneInput.addEventListener("input", validatePhone);
-  phoneInput.addEventListener("change", validatePhone);
-}
+  if (btnHaveNumber && stepIntro && stepAdd) {
+    btnHaveNumber.addEventListener("click", function (e) {
+      e.preventDefault();
+      stepIntro.style.display = "none";
+      stepIntro.classList.remove("is-active");
+      stepAdd.style.display = "";
+      stepAdd.classList.add("is-active");
+    });
+  }
 
-if (submitBtn) {
-  submitBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    if (!isFullUaPhone(phoneInput)) {
-      setFieldState(phoneInput, false);
-      return;
-    }
-    var phone = getPhoneDigits(phoneInput);
-    disableButton(submitBtn, true);
+  if (backBtn && stepIntro && stepAdd) {
+    backBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      stepAdd.style.display = "none";
+      stepAdd.classList.remove("is-active");
+      stepIntro.style.display = "";
+      stepIntro.classList.add("is-active");
+      phoneInput.value = formatUaPhoneVisual("380").visual;
+      phoneInput.dataset.phoneDigits = "380";
+      phoneInput.classList.remove("error", "is-validated");
+      disableButton(submitBtn, true);
+      if (errorMsg) errorMsg.classList.add("hide");
+    });
+  }
 
-    fetch(API_BASE + "/telecom/phoneNumbers/" + phone + "/status")
-      .then(function (res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        if (!data || !data.isOurNetwork) {
+  if (phoneInput) {
+    phoneInput.addEventListener("input", validatePhone);
+    phoneInput.addEventListener("change", validatePhone);
+  }
+
+  if (submitBtn) {
+    submitBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      if (!isFullUaPhone(phoneInput)) {
+        setFieldState(phoneInput, false);
+        return;
+      }
+      var phone = getPhoneDigits(phoneInput);
+      disableButton(submitBtn, true);
+
+      fetch(API_BASE + "/telecom/phoneNumbers/" + phone + "/status")
+        .then(function (res) {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          if (!data || !data.isOurNetwork) {
+            setFieldState(phoneInput, false);
+            if (errorMsg) errorMsg.classList.remove("hide");
+            disableButton(submitBtn, false);
+            return;
+          }
+          setFieldState(phoneInput, true);
+          if (errorMsg) errorMsg.classList.add("hide");
+
+          return fetch(API_BASE + "/payments/topUpInfo")
+            .then(function (r) {
+              if (!r.ok) throw new Error("HTTP " + r.status);
+              return r.json();
+            })
+            .then(function (info) {
+              var link = info && info.link ? info.link : null;
+              if (stepAdd && stepSuccess) {
+                stepAdd.style.display = "none";
+                stepAdd.classList.remove("is-active");
+                stepSuccess.style.display = "";
+                stepSuccess.classList.add("is-active");
+              }
+              if (link) {
+                var a = qs(".modal-relink-text a", dialog);
+                if (a) a.href = link;
+                setTimeout(function () {
+                  window.open(link, "_blank");
+                }, 1500);
+              }
+            });
+        })
+        .catch(function () {
           setFieldState(phoneInput, false);
           if (errorMsg) errorMsg.classList.remove("hide");
           disableButton(submitBtn, false);
-          return;
-        }
-        setFieldState(phoneInput, true);
-        if (errorMsg) errorMsg.classList.add("hide");
+        });
+    });
+  }
 
-        return fetch(API_BASE + "/payments/topUpInfo")
-          .then(function (r) {
-            if (!r.ok) throw new Error("HTTP " + r.status);
-            return r.json();
-          })
-          .then(function (info) {
-            var link = info && info.link ? info.link : null;
-            if (stepAdd && stepSuccess) {
-              stepAdd.style.display = "none";
-              stepAdd.classList.remove("is-active");
-              stepSuccess.style.display = "";
-              stepSuccess.classList.add("is-active");
-            }
-            if (link) {
-              var a = qs(".modal-relink-text a", dialog);
-              if (a) a.href = link;
-              setTimeout(function () {
-                window.open(link, "_blank");
-              }, 1500);
-            }
-          });
-      })
-      .catch(function () {
-        setFieldState(phoneInput, false);
-        if (errorMsg) errorMsg.classList.remove("hide");
-        disableButton(submitBtn, false);
-      });
-  });
-}
-
-validatePhone();
+  validatePhone();
 }
 
 function initEsimOrderModal() {
-var dialog = document.getElementById("modal-order");
-if (!dialog) return;
+  var dialog = document.getElementById("modal-order");
+  if (!dialog) return;
 
-var form = qs("form", dialog);
-if (form)
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-  });
+  var form = qs("form", dialog);
+  if (form)
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+    });
 
-var stepSelectType = qs(".modal-step-esim.is--select-type-sim", dialog);
-var stepDescribe = qs(".modal-step-esim.is--describe-you", dialog);
-var stepApply = qs(".modal-step-esim.is--apply-esim", dialog);
-var stepPayment = qs(".modal-step-esim.is--payment", dialog);
-var stepError = qs(".modal-error-esim", dialog);
-var stepSuccess = qs(".modal-success", dialog);
+  var stepSelectType = qs(".modal-step-esim.is--select-type-sim", dialog);
+  var stepDescribe = qs(".modal-step-esim.is--describe-you", dialog);
+  var stepApply = qs(".modal-step-esim.is--apply-esim", dialog);
+  var stepPayment = qs(".modal-step-esim.is--payment", dialog);
+  var stepError = qs(".modal-error-esim", dialog);
+  var stepSuccess = qs(".modal-success", dialog);
 
-var selectTypeBtn = stepSelectType
-  ? qs(".button.is-validation", stepSelectType)
-  : null;
-var describeBtn = stepDescribe
-  ? qs(".button.is-validation", stepDescribe)
-  : null;
-var applyBtn = stepApply ? qs(".button.is-validation", stepApply) : null;
-var paymentBtn = stepPayment
-  ? qs(".button.is-validation", stepPayment)
-  : null;
+  var selectTypeBtn = stepSelectType
+    ? qs(".button.is-validation", stepSelectType)
+    : null;
+  var describeBtn = stepDescribe
+    ? qs(".button.is-validation", stepDescribe)
+    : null;
+  var applyBtn = stepApply ? qs(".button.is-validation", stepApply) : null;
+  var paymentBtn = stepPayment
+    ? qs(".button.is-validation", stepPayment)
+    : null;
 
-var backButtons = qsa(".modal-form-button", dialog);
+  var backButtons = qsa(".modal-form-button", dialog);
 
-var radioSimType = qsa('input[name="New-Client"]', dialog);
-var firstNameInput = qs("#first-name", dialog);
-var lastNameInput = qs("#last-name", dialog);
-var emailInput = qs("#email", dialog);
+  var radioSimType = qsa('input[name="New-Client"]', dialog);
+  var firstNameInput = qs("#first-name", dialog);
+  var lastNameInput = qs("#last-name", dialog);
+  var emailInput = qs("#email", dialog);
 
-var orderState = (window.utmOrderState = window.utmOrderState || {});
+  var orderState = (window.utmOrderState = window.utmOrderState || {});
 
-var tableNames = qsa(".modal-esim_name");
-var tableEmails = qsa(".modal-esim_email");
-var tablePlans = qsa(".modal-esim_plan");
-var tablePrices = qsa(".modal-esim_price");
+  var tableNames = qsa(".modal-esim_name");
+  var tableEmails = qsa(".modal-esim_email");
+  var tablePlans = qsa(".modal-esim_plan");
+  var tablePrices = qsa(".modal-esim_price");
 
-// ячейка "Тип SIM" в таблице шага оплаты (динамический текст)
-var simTypeCell = null;
-if (stepPayment) {
-  var paymentRows = qsa(".modal-esim_table-row", stepPayment);
-  paymentRows.forEach(function (row) {
-    var label = qs(".modal-esim_table-label", row);
-    if (label && label.textContent.trim().indexOf("Тип SIM") === 0) {
-      var items = qsa(".modal-esim_table-item", row);
-      if (items[1]) {
-        var cellDiv = qs("div", items[1]);
-        if (cellDiv) simTypeCell = cellDiv;
+  // ячейка "Тип SIM" в таблице шага оплаты (динамический текст)
+  var simTypeCell = null;
+  if (stepPayment) {
+    var paymentRows = qsa(".modal-esim_table-row", stepPayment);
+    paymentRows.forEach(function (row) {
+      var label = qs(".modal-esim_table-label", row);
+      if (label && label.textContent.trim().indexOf("Тип SIM") === 0) {
+        var items = qsa(".modal-esim_table-item", row);
+        if (items[1]) {
+          var cellDiv = qs("div", items[1]);
+          if (cellDiv) simTypeCell = cellDiv;
+        }
       }
-    }
-  });
-}
+    });
+  }
 
-function getSimTypeRaw() {
-  var r = radioSimType.find(function (x) {
-    return x.checked;
-  });
-  return r ? r.value : null;
-}
+  function getSimTypeRaw() {
+    var r = radioSimType.find(function (x) {
+      return x.checked;
+    });
+    return r ? r.value : null;
+  }
 
-function getSimType() {
-  var val = getSimTypeRaw();
-  if (!val) return null;
-  // нормализация значений
-  var low = String(val).toLowerCase();
-  if (low === "esim" || low === "e-sim" || low === "e_sim") return "eSIM";
-  return "plastic";
-}
+  function getSimType() {
+    var val = getSimTypeRaw();
+    if (!val) return null;
 
-function updateSelectTypeValidity() {
-  var has = !!getSimTypeRaw();
-  if (selectTypeBtn) disableButton(selectTypeBtn, !has);
-}
+    var low = String(val).toLowerCase();
+    if (low === "esim" || low === "e-sim" || low === "e_sim") return "eSIM";
+    return "plastic";
+  }
 
-function updateDescribeValidity() {
-  var okFirst = !!firstNameInput.value.trim();
-  var okLast = !!lastNameInput.value.trim();
-  var okEmail = isValidEmail(emailInput.value);
-  setFieldState(firstNameInput, okFirst ? true : null);
-  setFieldState(lastNameInput, okLast ? true : null);
-  setFieldState(emailInput, okEmail ? true : null);
-  var all = okFirst && okLast && okEmail;
-  if (describeBtn) disableButton(describeBtn, !all);
-}
+  function updateSelectTypeValidity() {
+    var has = !!getSimTypeRaw();
+    if (selectTypeBtn) disableButton(selectTypeBtn, !has);
+  }
 
-radioSimType.forEach(function (r) {
-  r.addEventListener("change", updateSelectTypeValidity);
-});
-
-if (firstNameInput)
-  firstNameInput.addEventListener("input", updateDescribeValidity);
-if (lastNameInput)
-  lastNameInput.addEventListener("input", updateDescribeValidity);
-if (emailInput)
-  emailInput.addEventListener("input", updateDescribeValidity);
-
-if (selectTypeBtn && stepSelectType && stepDescribe) {
-  selectTypeBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    if (!getSimTypeRaw()) return;
-    stepSelectType.style.display = "none";
-    stepSelectType.classList.remove("is-active");
-    stepDescribe.style.display = "";
-    stepDescribe.classList.add("is-active");
-  });
-}
-
-if (describeBtn && stepDescribe) {
-  describeBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    updateDescribeValidity();
+  function updateDescribeValidity() {
     var okFirst = !!firstNameInput.value.trim();
     var okLast = !!lastNameInput.value.trim();
     var okEmail = isValidEmail(emailInput.value);
-    if (!okFirst || !okLast || !okEmail) return;
+    setFieldState(firstNameInput, okFirst ? true : null);
+    setFieldState(lastNameInput, okLast ? true : null);
+    setFieldState(emailInput, okEmail ? true : null);
+    var all = okFirst && okLast && okEmail;
+    if (describeBtn) disableButton(describeBtn, !all);
+  }
 
-    var fullName =
-      firstNameInput.value.trim() + " " + lastNameInput.value.trim();
-    var email = emailInput.value.trim();
-    var planName = orderState.planName || "";
-    var planPrice = orderState.planPrice || "";
+  radioSimType.forEach(function (r) {
+    r.addEventListener("change", updateSelectTypeValidity);
+  });
 
-    tableNames.forEach(function (n) {
-      n.textContent = fullName;
+  if (firstNameInput)
+    firstNameInput.addEventListener("input", updateDescribeValidity);
+  if (lastNameInput)
+    lastNameInput.addEventListener("input", updateDescribeValidity);
+  if (emailInput)
+    emailInput.addEventListener("input", updateDescribeValidity);
+
+  if (selectTypeBtn && stepSelectType && stepDescribe) {
+    selectTypeBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      if (!getSimTypeRaw()) return;
+      stepSelectType.style.display = "none";
+      stepSelectType.classList.remove("is-active");
+      stepDescribe.style.display = "";
+      stepDescribe.classList.add("is-active");
     });
-    tableEmails.forEach(function (n) {
-      n.textContent = email;
-    });
-    tablePlans.forEach(function (n) {
-      n.textContent = planName;
-    });
-    tablePrices.forEach(function (n) {
-      n.textContent = planPrice;
-    });
+  }
 
-    var type = getSimType(); // "eSIM" или "plastic"
+  if (describeBtn && stepDescribe) {
+    describeBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      updateDescribeValidity();
+      var okFirst = !!firstNameInput.value.trim();
+      var okLast = !!lastNameInput.value.trim();
+      var okEmail = isValidEmail(emailInput.value);
+      if (!okFirst || !okLast || !okEmail) return;
 
-    // динамический текст "Тип SIM" в таблице
-    if (simTypeCell) {
-      simTypeCell.textContent = type === "eSIM" ? "eSIM" : "Пластикова SIM";
-    }
+      var fullName =
+        firstNameInput.value.trim() + " " + lastNameInput.value.trim();
+      var email = emailInput.value.trim();
+      var planName = orderState.planName || "";
+      var planPrice = orderState.planPrice || "";
 
-    stepDescribe.style.display = "none";
-    stepDescribe.classList.remove("is-active");
+      tableNames.forEach(function (n) {
+        n.textContent = fullName;
+      });
+      tableEmails.forEach(function (n) {
+        n.textContent = email;
+      });
+      tablePlans.forEach(function (n) {
+        n.textContent = planName;
+      });
+      tablePrices.forEach(function (n) {
+        n.textContent = planPrice;
+      });
 
-    if (type === "eSIM") {
-      // eSIM идёт на шаг оплаты в этой же модалке
-      if (stepApply) {
-        stepApply.style.display = "";
-        stepApply.classList.add("is-active");
-      } else if (stepPayment) {
-        stepPayment.style.display = "";
-        stepPayment.classList.add("is-active");
-        // заглушка: сразу разрешаем оплату
-        if (paymentBtn) disableButton(paymentBtn, false);
+      var type = getSimType(); // "eSIM" или "plastic"
+
+      // динамический текст "Тип SIM" в таблице
+      if (simTypeCell) {
+        simTypeCell.textContent = type === "eSIM" ? "eSIM" : "Пластикова SIM";
       }
-    } else {
-      // Пластиковая SIM перекидывается в модалку доставки
+
+      stepDescribe.style.display = "none";
+      stepDescribe.classList.remove("is-active");
+
+      if (type === "eSIM") {
+        // eSIM идёт на шаг оплаты в этой же модалке
+        if (stepApply) {
+          stepApply.style.display = "";
+          stepApply.classList.add("is-active");
+        } else if (stepPayment) {
+          stepPayment.style.display = "";
+          stepPayment.classList.add("is-active");
+          // заглушка: сразу разрешаем оплату
+          if (paymentBtn) disableButton(paymentBtn, false);
+        }
+      } else {
+        // Пластиковая SIM перекидывается в модалку доставки
       console.log("[UTM] Switching to plastic delivery modal");
-      var wrapper = dialog.closest(".modal");
-      if (wrapper) {
-        var plasticDialog = qs(".modal__dialog.modal--md", wrapper);
-        if (plasticDialog) {
+        var wrapper = dialog.closest(".modal");
+        if (wrapper) {
+          var plasticDialog = qs(".modal__dialog.modal--md", wrapper);
+          if (plasticDialog) {
           console.log("[UTM] Found plastic dialog, switching to it");
-          dialog.classList.remove("is-open");
-          plasticDialog.classList.add("is-open");
-          modalApi.resetSteps(plasticDialog);
+            dialog.classList.remove("is-open");
+            plasticDialog.classList.add("is-open");
+            modalApi.resetSteps(plasticDialog);
           // Инициализируем NovaPoshta селекты при открытии модального окна доставки
           console.log("[NovaPoshta] Plastic delivery modal opened, initializing NovaPoshta selects");
           setTimeout(function() {
@@ -542,103 +789,204 @@ if (describeBtn && stepDescribe) {
         }
       } else {
         console.warn("[UTM] Modal wrapper not found!");
-      }
-    }
-  });
-}
-
-if (applyBtn && stepApply && stepPayment) {
-  applyBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    stepApply.style.display = "none";
-    stepApply.classList.remove("is-active");
-    stepPayment.style.display = "";
-    stepPayment.classList.add("is-active");
-    // заглушка: разрешаем оплату на шаге оплаты
-    if (paymentBtn) disableButton(paymentBtn, false);
-  });
-}
-
-if (paymentBtn && stepPayment) {
-  paymentBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    var type = getSimType(); // "eSIM" или "plastic"
-
-    // eSIM: заглушка бэкенда — просто открываем модалку с инструкцией (#modal-success-esim)
-    if (type === "eSIM") {
-      disableButton(paymentBtn, true);
-      var wrapper = dialog.closest(".modal");
-      if (wrapper) {
-        // модалка с инструкцией eSIM
-        var esimSuccessDialog =
-          document.getElementById("modal-success-esim") ||
-          qs(".modal__dialog.modal--lg", wrapper);
-        if (esimSuccessDialog) {
-          // закрываем текущий диалог оплаты
-          qsa(".modal__dialog", wrapper).forEach(function (dlg) {
-            dlg.classList.remove("is-open");
-          });
-          // показываем диалог с успехом/инструкцией
-          esimSuccessDialog.classList.add("is-open");
-          modalApi.resetSteps(esimSuccessDialog);
         }
       }
-      return;
-    }
+    });
+  }
 
-    // на случай, если когда-то этот шаг будут использовать и для пластика — старое поведение
-    disableButton(paymentBtn, true);
-    setTimeout(function () {
-      disableButton(paymentBtn, false);
-      stepPayment.style.display = "none";
-      stepPayment.classList.remove("is-active");
-      if (stepSuccess) {
-        stepSuccess.style.display = "";
-        stepSuccess.classList.add("is-active");
+  if (applyBtn && stepApply && stepPayment) {
+    applyBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      stepApply.style.display = "none";
+      stepApply.classList.remove("is-active");
+      stepPayment.style.display = "";
+      stepPayment.classList.add("is-active");
+      // заглушка: разрешаем оплату на шаге оплаты
+      if (paymentBtn) disableButton(paymentBtn, false);
+    });
+  }
+
+  if (paymentBtn && stepPayment) {
+    paymentBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      var type = getSimType(); // "eSIM" или "plastic"
+
+      // eSIM: заглушка бэкенда — просто открываем модалку с инструкцией (#modal-success-esim)
+      if (type === "eSIM") {
+        disableButton(paymentBtn, true);
+        var wrapper = dialog.closest(".modal");
+        if (wrapper) {
+          // модалка с инструкцией eSIM
+          var esimSuccessDialog =
+            document.getElementById("modal-success-esim") ||
+            qs(".modal__dialog.modal--lg", wrapper);
+          if (esimSuccessDialog) {
+            // закрываем текущий диалог оплаты
+            qsa(".modal__dialog", wrapper).forEach(function (dlg) {
+              dlg.classList.remove("is-open");
+            });
+            // показываем диалог с успехом/инструкцией
+            esimSuccessDialog.classList.add("is-open");
+            modalApi.resetSteps(esimSuccessDialog);
+          }
+        }
+        return;
       }
-    }, 800);
-  });
-}
 
-backButtons.forEach(function (btn) {
-  btn.addEventListener("click", function (e) {
-    e.preventDefault();
-    var step = btn.closest(
-      ".modal-step-esim, .modal-error-esim, .modal-success"
-    );
-    if (!step) return;
-    var steps = qsa(
-      ".modal-step-esim, .modal-error-esim, .modal-success",
-      dialog
-    );
-    var i = steps.indexOf(step);
-    if (i <= 0) return;
-    step.style.display = "none";
-    step.classList.remove("is-active");
-    var prev = steps[i - 1];
-    if (prev) {
-      prev.style.display = "";
-      prev.classList.add("is-active");
-    }
-  });
-});
+      // на случай, если когда-то этот шаг будут использовать и для пластика — старое поведение
+      disableButton(paymentBtn, true);
+      setTimeout(function () {
+        disableButton(paymentBtn, false);
+        stepPayment.style.display = "none";
+        stepPayment.classList.remove("is-active");
+        if (stepSuccess) {
+          stepSuccess.style.display = "";
+          stepSuccess.classList.add("is-active");
+        }
+      }, 800);
+    });
+  }
 
-updateSelectTypeValidity();
-updateDescribeValidity();
+  backButtons.forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      var step = btn.closest(
+        ".modal-step-esim, .modal-error-esim, .modal-success"
+      );
+      if (!step) return;
+      var steps = qsa(
+        ".modal-step-esim, .modal-error-esim, .modal-success",
+        dialog
+      );
+      var i = steps.indexOf(step);
+      if (i <= 0) return;
+      step.style.display = "none";
+      step.classList.remove("is-active");
+      var prev = steps[i - 1];
+      if (prev) {
+        prev.style.display = "";
+        prev.classList.add("is-active");
+      }
+    });
+  });
+
+  updateSelectTypeValidity();
+  updateDescribeValidity();
 }
 
 var npState = { cityId: null };
 
 function npFetchJson(url) {
-return fetch(url).then(function (res) {
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
-});
+  return fetch(url).then(function (res) {
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  });
+}
+
+async function npLoadInitialCities(limit) {
+var params = new URLSearchParams();
+params.set("page", "1");
+params.set("limit", String(limit));
+var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
+console.log("[NovaPoshta] npLoadInitialCities: fetching initial", limit, "cities");
+try {
+  var data = await npFetchJson(url);
+  return data.payload || [];
+} catch (e) {
+  console.error("[NovaPoshta] npLoadInitialCities: error:", e);
+  return [];
+}
+}
+
+async function npSearchCities(query) {
+var params = new URLSearchParams();
+params.set("page", "1");
+params.set("limit", "50");
+params.set("searchQuery", query);
+var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
+console.log("[NovaPoshta] npSearchCities: searching for", query);
+try {
+  var data = await npFetchJson(url);
+  return data.payload || [];
+} catch (e) {
+  console.error("[NovaPoshta] npSearchCities: error:", e);
+  return [];
+}
+}
+
+async function npLoadInitialStreets(cityId, limit) {
+if (!cityId) return [];
+var params = new URLSearchParams();
+params.set("page", "1");
+params.set("limit", String(limit));
+params.set("cityId", cityId);
+var url = API_BASE + "/delivery/novaPost/streets?" + params.toString();
+console.log("[NovaPoshta] npLoadInitialStreets: fetching initial", limit, "streets for city", cityId);
+try {
+  var data = await npFetchJson(url);
+  return data.payload || [];
+} catch (e) {
+  console.error("[NovaPoshta] npLoadInitialStreets: error:", e);
+  return [];
+}
+}
+
+async function npSearchStreets(query, cityId) {
+if (!cityId) return Promise.resolve([]);
+var params = new URLSearchParams();
+params.set("page", "1");
+params.set("limit", "50");
+params.set("searchQuery", query);
+params.set("cityId", cityId);
+var url = API_BASE + "/delivery/novaPost/streets?" + params.toString();
+console.log("[NovaPoshta] npSearchStreets: searching for", query, "in city", cityId);
+try {
+  var data = await npFetchJson(url);
+  return data.payload || [];
+} catch (e) {
+  console.error("[NovaPoshta] npSearchStreets: error:", e);
+  return [];
+}
+}
+
+async function npLoadInitialBranches(cityId, limit) {
+if (!cityId) return [];
+var params = new URLSearchParams();
+params.set("page", "1");
+params.set("limit", String(limit));
+params.set("cityId", cityId);
+var url = API_BASE + "/delivery/novaPost/branches?" + params.toString();
+console.log("[NovaPoshta] npLoadInitialBranches: fetching initial", limit, "branches for city", cityId);
+try {
+  var data = await npFetchJson(url);
+  return data.payload || [];
+} catch (e) {
+  console.error("[NovaPoshta] npLoadInitialBranches: error:", e);
+  return [];
+}
+}
+
+async function npSearchBranches(query, cityId) {
+if (!cityId) return Promise.resolve([]);
+var params = new URLSearchParams();
+params.set("page", "1");
+params.set("limit", "50");
+params.set("searchQuery", query);
+params.set("cityId", cityId);
+var url = API_BASE + "/delivery/novaPost/branches?" + params.toString();
+console.log("[NovaPoshta] npSearchBranches: searching for", query, "in city", cityId);
+try {
+  var data = await npFetchJson(url);
+  return data.payload || [];
+} catch (e) {
+  console.error("[NovaPoshta] npSearchBranches: error:", e);
+  return [];
+}
 }
 
 async function npLoadAllCities() {
 console.log("[NovaPoshta] npLoadAllCities: starting...");
-var select = document.getElementById("City");
+  var select = document.getElementById("City");
 if (!select) {
   console.warn("[NovaPoshta] npLoadAllCities: City select not found!");
   return;
@@ -648,33 +996,33 @@ if (select.dataset.loading === "1") {
   return;
 }
 console.log("[NovaPoshta] npLoadAllCities: City select found, starting load");
-var phOpt = select.querySelector("option[value='']") || select.options[0];
-var phText = phOpt ? phOpt.textContent : "Введіть назву міста";
-select.innerHTML = "";
-var ph = document.createElement("option");
-ph.value = "";
-ph.textContent = phText;
-select.appendChild(ph);
+  var phOpt = select.querySelector("option[value='']") || select.options[0];
+  var phText = phOpt ? phOpt.textContent : "Введіть назву міста";
+  select.innerHTML = "";
+  var ph = document.createElement("option");
+  ph.value = "";
+  ph.textContent = phText;
+  select.appendChild(ph);
 select.dataset.loading = "1";
-var page = 1;
+  var page = 1;
 var limit = 500;
 var totalLoaded = 0;
 var hasMore = true;
 
 while (hasMore) {
-  var params = new URLSearchParams();
-  params.set("page", String(page));
-  params.set("limit", String(limit));
+    var params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(limit));
   var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
   console.log("[NovaPoshta] npLoadAllCities: fetching page", page, "from", url);
-  var data;
-  try {
+    var data;
+    try {
     data = await npFetchJson(url);
     console.log("[NovaPoshta] npLoadAllCities: received response for page", page, ":", data);
-  } catch (e) {
+    } catch (e) {
     console.error("[NovaPoshta] npLoadAllCities: error on page", page, ":", e);
-    break;
-  }
+      break;
+    }
   
   // Обработка разных форматов ответа API
   var items = null;
@@ -700,12 +1048,21 @@ while (hasMore) {
     break;
   }
   
+  var seenValues = {};
+  var seenTexts = {};
   items.forEach(function (item) {
-    var opt = document.createElement("option");
-    opt.value = item.id || item.Ref || item.ref;
-    opt.textContent = item.name || item.Description || item.description;
-    select.appendChild(opt);
-  });
+    var value = item.id || item.Ref || item.ref;
+    var text = item.name || item.Description || item.description;
+    if (!value || !text) return;
+    var textKey = String(text).trim().toLowerCase();
+    if (seenValues[value] || seenTexts[textKey]) return;
+    seenValues[value] = true;
+    seenTexts[textKey] = true;
+      var opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = text;
+      select.appendChild(opt);
+    });
   
   totalLoaded += items.length;
   console.log("[NovaPoshta] npLoadAllCities: loaded page", page, "-", items.length, "items (total:", totalLoaded, ")");
@@ -734,8 +1091,8 @@ while (hasMore) {
       console.log("[NovaPoshta] npLoadAllCities: reached totalPages (", totalPages, "), stopping");
       hasMore = false;
     } else {
-      page++;
-    }
+    page++;
+  }
   } else if (totalCount !== null && typeof totalCount === "number") {
     if (totalLoaded >= totalCount) {
       console.log("[NovaPoshta] npLoadAllCities: reached totalCount (", totalCount, "), stopping");
@@ -766,37 +1123,37 @@ delete select.dataset.loading;
 }
 
 async function npLoadAllStreets() {
-if (!npState.cityId) return;
-var select = document.getElementById("Address");
-if (!select) return;
+  if (!npState.cityId) return;
+  var select = document.getElementById("Address");
+  if (!select) return;
 if (select.dataset.loading === "1") return;
-var phOpt = select.querySelector("option[value='']") || select.options[0];
-var phText = phOpt ? phOpt.textContent : "Введіть адресу";
-select.innerHTML = "";
-var ph = document.createElement("option");
-ph.value = "";
-ph.textContent = phText;
-select.appendChild(ph);
+  var phOpt = select.querySelector("option[value='']") || select.options[0];
+  var phText = phOpt ? phOpt.textContent : "Введіть адресу";
+  select.innerHTML = "";
+  var ph = document.createElement("option");
+  ph.value = "";
+  ph.textContent = phText;
+  select.appendChild(ph);
 select.dataset.loading = "1";
-var page = 1;
+  var page = 1;
 var limit = 500;
 var totalLoaded = 0;
 var hasMore = true;
 
 while (hasMore) {
-  var params = new URLSearchParams();
-  params.set("page", String(page));
-  params.set("limit", String(limit));
-  params.set("cityId", npState.cityId);
-  var data;
-  try {
-    data = await npFetchJson(
-      API_BASE + "/delivery/novaPost/streets?" + params.toString()
-    );
-  } catch (e) {
+    var params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(limit));
+    params.set("cityId", npState.cityId);
+    var data;
+    try {
+      data = await npFetchJson(
+        API_BASE + "/delivery/novaPost/streets?" + params.toString()
+      );
+    } catch (e) {
     console.error("NovaPoshta streets error:", e);
-    break;
-  }
+      break;
+    }
   
   var items = null;
   if (Array.isArray(data)) {
@@ -814,12 +1171,21 @@ while (hasMore) {
     break;
   }
   
+  var seenValues = {};
+  var seenTexts = {};
   items.forEach(function (item) {
-    var opt = document.createElement("option");
-    opt.value = item.id || item.Ref || item.ref;
-    opt.textContent = item.name || item.Description || item.description;
-    select.appendChild(opt);
-  });
+    var value = item.id || item.Ref || item.ref;
+    var text = item.name || item.Description || item.description;
+    if (!value || !text) return;
+    var textKey = String(text).trim().toLowerCase();
+    if (seenValues[value] || seenTexts[textKey]) return;
+    seenValues[value] = true;
+    seenTexts[textKey] = true;
+      var opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = text;
+      select.appendChild(opt);
+    });
   
   totalLoaded += items.length;
   
@@ -837,8 +1203,8 @@ while (hasMore) {
     if (page >= totalPages) {
       hasMore = false;
     } else {
-      page++;
-    }
+    page++;
+  }
   } else if (totalCount !== null && typeof totalCount === "number") {
     if (totalLoaded >= totalCount) {
       hasMore = false;
@@ -861,39 +1227,39 @@ delete select.dataset.loading;
 }
 
 async function npLoadAllBranches() {
-if (!npState.cityId) return;
-var select = document.getElementById("Department");
-if (!select) return;
+  if (!npState.cityId) return;
+  var select = document.getElementById("Department");
+  if (!select) return;
 if (select.dataset.loading === "1") return;
-var phOpt = select.querySelector("option[value='']") || select.options[0];
-var phText = phOpt
-  ? phOpt.textContent
-  : "Введіть Номер відділення чи поштомату";
-select.innerHTML = "";
-var ph = document.createElement("option");
-ph.value = "";
-ph.textContent = phText;
-select.appendChild(ph);
+  var phOpt = select.querySelector("option[value='']") || select.options[0];
+  var phText = phOpt
+    ? phOpt.textContent
+    : "Введіть Номер відділення чи поштомату";
+  select.innerHTML = "";
+  var ph = document.createElement("option");
+  ph.value = "";
+  ph.textContent = phText;
+  select.appendChild(ph);
 select.dataset.loading = "1";
-var page = 1;
+  var page = 1;
 var limit = 500;
 var totalLoaded = 0;
 var hasMore = true;
 
 while (hasMore) {
-  var params = new URLSearchParams();
-  params.set("page", String(page));
-  params.set("limit", String(limit));
-  params.set("cityId", npState.cityId);
-  var data;
-  try {
-    data = await npFetchJson(
-      API_BASE + "/delivery/novaPost/branches?" + params.toString()
-    );
-  } catch (e) {
+    var params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(limit));
+    params.set("cityId", npState.cityId);
+    var data;
+    try {
+      data = await npFetchJson(
+        API_BASE + "/delivery/novaPost/branches?" + params.toString()
+      );
+    } catch (e) {
     console.error("NovaPoshta branches error:", e);
-    break;
-  }
+      break;
+    }
   
   var items = null;
   if (Array.isArray(data)) {
@@ -911,12 +1277,21 @@ while (hasMore) {
     break;
   }
   
+  var seenValues = {};
+  var seenTexts = {};
   items.forEach(function (item) {
-    var opt = document.createElement("option");
-    opt.value = item.id || item.Ref || item.ref;
-    opt.textContent = item.name || item.Description || item.description;
-    select.appendChild(opt);
-  });
+    var value = item.id || item.Ref || item.ref;
+    var text = item.name || item.Description || item.description;
+    if (!value || !text) return;
+    var textKey = String(text).trim().toLowerCase();
+    if (seenValues[value] || seenTexts[textKey]) return;
+    seenValues[value] = true;
+    seenTexts[textKey] = true;
+      var opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = text;
+      select.appendChild(opt);
+    });
   
   totalLoaded += items.length;
   
@@ -934,8 +1309,8 @@ while (hasMore) {
     if (page >= totalPages) {
       hasMore = false;
     } else {
-      page++;
-    }
+    page++;
+  }
   } else if (totalCount !== null && typeof totalCount === "number") {
     if (totalLoaded >= totalCount) {
       hasMore = false;
@@ -957,217 +1332,529 @@ while (hasMore) {
 delete select.dataset.loading;
 }
 
+function initNovaPostAutocomplete(select, searchFn, minChars, initialLoadFn) {
+if (!select) return;
+if (select.dataset.npAutocomplete === "1") {
+  console.log("[NovaPoshta] Autocomplete already initialized for", select.id);
+  return;
+}
+
+var wrapper = select.closest(".np-select-wrapper");
+if (!wrapper) {
+  console.warn("[NovaPoshta] np-select-wrapper not found for", select.id);
+  return;
+}
+
+var displayInput = wrapper.querySelector('.w-embed .np-select-display') || wrapper.querySelector('.np-select-display');
+var dropdown = wrapper.querySelector(".np-select-dropdown");
+var searchInput = wrapper.querySelector(".np-select-search");
+var resultsList = wrapper.querySelector(".np-select-results");
+
+if (!displayInput || !dropdown || !searchInput || !resultsList) {
+  console.warn("[NovaPoshta] Required elements not found for", select.id);
+  return;
+}
+
+select.dataset.npAutocomplete = "1";
+var isOpen = false;
+var requestCounter = 0;
+
+var savedPlaceholder = displayInput.getAttribute("placeholder") || displayInput.getAttribute("data-placeholder") || "";
+
+function updateDisplay() {
+  var selectedOption = select.options[select.selectedIndex];
+  if (selectedOption && selectedOption.value) {
+    displayInput.value = selectedOption.textContent;
+    displayInput.classList.remove("placeholder");
+  } else {
+    displayInput.value = "";
+    displayInput.classList.add("placeholder");
+  }
+}
+
+function addItemToSelect(item, addToDropdown) {
+  var value = item.id || item.Ref || item.ref;
+  var text = item.name || item.Description || item.description;
+  if (!value || !text) return null;
+
+  var existingOption = select.querySelector('option[value="' + value + '"]');
+  if (!existingOption) {
+    var opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = text;
+    select.appendChild(opt);
+  }
+
+  if (addToDropdown) {
+    var itemDiv = document.createElement("div");
+    itemDiv.className = "np-select-item";
+    itemDiv.textContent = text;
+    itemDiv.dataset.value = value;
+    itemDiv.dataset.text = text;
+
+    if (select.value === value) {
+      itemDiv.classList.add("selected");
+    }
+
+    itemDiv.addEventListener("mouseenter", function() {
+      itemDiv.style.backgroundColor = "#f5f5f5";
+    });
+    itemDiv.addEventListener("mouseleave", function() {
+      if (select.value !== value) {
+        itemDiv.style.backgroundColor = "";
+      }
+    });
+    itemDiv.addEventListener("click", function() {
+      select.value = value;
+      updateDisplay();
+      hideDropdown();
+      var changeEvent = new Event("change", { bubbles: true });
+      select.dispatchEvent(changeEvent);
+    });
+
+    return itemDiv;
+  }
+  return null;
+}
+
+function showInitialItems() {
+  resultsList.innerHTML = "";
+  var options = select.querySelectorAll("option[value]:not([value=''])");
+  var shown = 0;
+  var maxShow = 15;
+  var seenTexts = {};
+
+  for (var i = 0; i < options.length && shown < maxShow; i++) {
+    var opt = options[i];
+    if (opt.value) {
+      var text = opt.textContent.trim();
+      var textKey = text.toLowerCase();
+      if (seenTexts[textKey]) {
+        continue;
+      }
+      seenTexts[textKey] = true;
+      
+      var itemDiv = document.createElement("div");
+      itemDiv.className = "np-select-item";
+      itemDiv.textContent = text;
+      itemDiv.dataset.value = opt.value;
+      itemDiv.dataset.text = text;
+
+      if (select.value === opt.value) {
+        itemDiv.classList.add("selected");
+      }
+
+      itemDiv.addEventListener("mouseenter", function() {
+        this.style.backgroundColor = "#f5f5f5";
+      });
+      itemDiv.addEventListener("mouseleave", function() {
+        if (select.value !== this.dataset.value) {
+          this.style.backgroundColor = "";
+        }
+      });
+      itemDiv.addEventListener("click", function() {
+        select.value = this.dataset.value;
+        updateDisplay();
+        hideDropdown();
+        var changeEvent = new Event("change", { bubbles: true });
+        select.dispatchEvent(changeEvent);
+      });
+
+      resultsList.appendChild(itemDiv);
+      shown++;
+    }
+  }
+  if (shown === 0) {
+    var noResults = document.createElement("div");
+    noResults.className = "np-select-no-results";
+    noResults.textContent = "Введіть для пошуку...";
+    resultsList.appendChild(noResults);
+  }
+}
+
+function showDropdown() {
+  if (isOpen) return;
+  isOpen = true;
+  wrapper.classList.add("active");
+  searchInput.focus();
+  searchInput.value = "";
+  showInitialItems();
+}
+
+function hideDropdown() {
+  if (!isOpen) return;
+  isOpen = false;
+  wrapper.classList.remove("active");
+  searchInput.value = "";
+}
+
+var searchDebounced = debounce(function(query) {
+  console.log("[NovaPoshta] searchDebounced called for", select.id, "with query:", query);
+  requestCounter++;
+  var currentRequestId = requestCounter;
+  select.dataset.currentRequestId = String(currentRequestId);
+
+  resultsList.innerHTML = '<div class="np-select-loading">Завантаження...</div>';
+
+  console.log("[NovaPoshta] Calling searchFn for", select.id, "query:", query);
+  searchFn(query).then(function(items) {
+    console.log("[NovaPoshta] Search results received for", select.id, "items count:", items ? items.length : 0);
+    if (!wrapper || !resultsList) {
+      console.warn("[NovaPoshta] Wrapper or resultsList not found for", select.id);
+      return;
+    }
+    if (String(select.dataset.currentRequestId) !== String(currentRequestId)) {
+      console.log("[NovaPoshta] Ignoring outdated search results for", select.id);
+      return;
+    }
+
+    if (!items || items.length === 0) {
+      console.log("[NovaPoshta] No items found for", select.id);
+      resultsList.innerHTML = '<div class="np-select-no-results">Нічого не знайдено</div>';
+      return;
+    }
+
+    console.log("[NovaPoshta] Processing", items.length, "items for", select.id);
+    var seenValues = {};
+    var seenTexts = {};
+    var itemsToAdd = [];
+    
+    items.forEach(function(item) {
+      var value = item.id || item.Ref || item.ref;
+      var text = item.name || item.Description || item.description;
+      if (!value || !text) return;
+      var textKey = String(text).trim().toLowerCase();
+      if (seenValues[value] || seenTexts[textKey]) {
+        console.log("[NovaPoshta] Skipping duplicate item:", text, "value:", value);
+        return;
+      }
+      seenValues[value] = true;
+      seenTexts[textKey] = true;
+      itemsToAdd.push(item);
+    });
+    
+    var existingTexts = {};
+    var existingItems = resultsList.querySelectorAll('.np-select-item');
+    existingItems.forEach(function(existingItem) {
+      var existingText = (existingItem.dataset.text || existingItem.textContent || "").trim().toLowerCase();
+      if (existingText) {
+        existingTexts[existingText] = true;
+      }
+    });
+    
+    resultsList.innerHTML = "";
+    var addedCount = 0;
+    var finalSeenTexts = {};
+    itemsToAdd.forEach(function(item) {
+      var text = item.name || item.Description || item.description;
+      if (!text) return;
+      var textKey = String(text).trim().toLowerCase();
+      if (finalSeenTexts[textKey]) {
+        console.log("[NovaPoshta] Skipping duplicate text in results:", text);
+        return;
+      }
+      finalSeenTexts[textKey] = true;
+      var itemDiv = addItemToSelect(item, true);
+      if (itemDiv) {
+        resultsList.appendChild(itemDiv);
+        addedCount++;
+      }
+    });
+    console.log("[NovaPoshta] Added", addedCount, "items to dropdown for", select.id);
+  }).catch(function(err) {
+    console.error("[NovaPoshta] Search error for", select.id, ":", err);
+    if (!wrapper || !resultsList) return;
+    if (String(select.dataset.currentRequestId) !== String(currentRequestId)) return;
+    resultsList.innerHTML = '<div class="np-select-error">Помилка завантаження</div>';
+  });
+}, 300);
+
+displayInput.addEventListener("click", function(e) {
+  e.preventDefault();
+  if (isOpen) {
+    hideDropdown();
+  } else {
+    showDropdown();
+  }
+});
+
+searchInput.addEventListener("input", function(e) {
+  var query = (e.target.value || "").trim();
+  console.log("[NovaPoshta] Search input changed for", select.id, "query:", query, "length:", query.length, "minChars:", minChars);
+  if (query.length >= minChars) {
+    console.log("[NovaPoshta] Triggering search for", select.id, "with query:", query);
+    searchDebounced(query);
+  } else {
+    console.log("[NovaPoshta] Query too short, showing initial items for", select.id);
+    showInitialItems();
+  }
+});
+
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape" && isOpen) {
+    hideDropdown();
+  }
+});
+
+document.addEventListener("click", function(e) {
+  if (isOpen && !wrapper.contains(e.target)) {
+    hideDropdown();
+  }
+});
+
+select.addEventListener("change", function() {
+  updateDisplay();
+});
+
+if (initialLoadFn && typeof initialLoadFn === "function") {
+  initialLoadFn(15).then(function(items) {
+    if (items && items.length > 0) {
+      var seen = {};
+      items.forEach(function(item) {
+        var value = item.id || item.Ref || item.ref;
+        if (value && !seen[value]) {
+          seen[value] = true;
+          addItemToSelect(item, false);
+        }
+      });
+      console.log("[NovaPoshta] Loaded", items.length, "initial items for", select.id);
+      updateDisplay();
+    }
+  }).catch(function(err) {
+    console.error("[NovaPoshta] Error loading initial items:", err);
+  });
+}
+
+updateDisplay();
+}
+
 function initNovaPostSelects() {
 console.log("[NovaPoshta] initNovaPostSelects: initializing...");
-var citySelect = document.getElementById("City");
-var addrSelect = document.getElementById("Address");
-var deptSelect = document.getElementById("Department");
+  var citySelect = document.getElementById("City");
+  var addrSelect = document.getElementById("Address");
+  var deptSelect = document.getElementById("Department");
 
 console.log("[NovaPoshta] initNovaPostSelects: citySelect found:", !!citySelect, "addrSelect:", !!addrSelect, "deptSelect:", !!deptSelect);
 
-if (citySelect) {
-  // Проверяем, нужно ли загружать города
-  // Если в селекте только placeholder или очень мало опций (< 10), значит нужно загрузить
-  var currentOptionsCount = citySelect.options.length;
-  var hasOnlyPlaceholder = currentOptionsCount <= 1 || (currentOptionsCount === 2 && !citySelect.options[1].value);
+if (citySelect && !citySelect.dataset.npInitialized) {
+  citySelect.dataset.npInitialized = "1";
   
-  console.log("[NovaPoshta] initNovaPostSelects: current options count:", currentOptionsCount, "hasOnlyPlaceholder:", hasOnlyPlaceholder);
-  
-  // Загружаем города, если их нет или очень мало (меньше 10)
-  if (hasOnlyPlaceholder || currentOptionsCount < 10) {
-    console.log("[NovaPoshta] initNovaPostSelects: triggering city load (options count:", currentOptionsCount, ")");
-    // Не устанавливаем data-loaded, чтобы можно было перезагрузить при необходимости
-    npLoadAllCities();
-  } else {
-    console.log("[NovaPoshta] initNovaPostSelects: cities already loaded (", currentOptionsCount, "options), skipping");
-  }
+  initNovaPostAutocomplete(citySelect, function(query) {
+    return npSearchCities(query);
+  }, 2, function(limit) {
+    return npLoadInitialCities(limit);
+    });
 
-  // Убираем старые обработчики и добавляем новые
-  citySelect.removeEventListener("focus", citySelect._npFocusHandler);
-  citySelect._npFocusHandler = function () {
-    console.log("[NovaPoshta] initNovaPostSelects: citySelect focused");
-    if (citySelect.dataset.loading !== "1" && (citySelect.options.length <= 1 || citySelect.options.length < 10)) {
-      console.log("[NovaPoshta] initNovaPostSelects: triggering city load on focus");
-      npLoadAllCities();
-    }
-  };
-  citySelect.addEventListener("focus", citySelect._npFocusHandler);
-
-  citySelect.addEventListener("change", function () {
-    npState.cityId = citySelect.value || null;
-    if (addrSelect) {
-      addrSelect.dataset.loaded = "";
-      addrSelect.innerHTML = '<option value="">Введіть адресу</option>';
+    citySelect.addEventListener("change", function () {
+      npState.cityId = citySelect.value || null;
+      if (addrSelect) {
+      addrSelect.value = "";
+        addrSelect.innerHTML = '<option value="">Введіть адресу</option>';
+      var addrWrapper = addrSelect.closest(".np-select-wrapper");
+      if (addrWrapper) {
+        var addrDisplay = addrWrapper.querySelector('.np-select-display') || addrWrapper.querySelector('.w-embed .np-select-display');
+        if (addrDisplay) {
+          addrDisplay.value = "";
+          addrDisplay.classList.add("placeholder");
+        }
+      }
+      delete addrSelect.dataset.npInitialized;
+      delete addrSelect.dataset.npAutocomplete;
+      if (npState.cityId) {
+        initNovaPostAutocomplete(addrSelect, function(query) {
+          if (!npState.cityId) return Promise.resolve([]);
+          return npSearchStreets(query, npState.cityId);
+        }, 2, function(limit) {
+          if (!npState.cityId) return Promise.resolve([]);
+          return npLoadInitialStreets(npState.cityId, limit);
+        });
+      }
     }
     if (deptSelect) {
-      deptSelect.dataset.loaded = "";
-      deptSelect.innerHTML =
-        '<option value="">Введіть Номер відділення чи поштомату</option>';
+      deptSelect.value = "";
+      deptSelect.innerHTML = '<option value="">Введіть Номер відділення чи поштомату</option>';
+      var deptWrapper = deptSelect.closest(".np-select-wrapper");
+      if (deptWrapper) {
+        var deptDisplay = deptWrapper.querySelector('.np-select-display') || deptWrapper.querySelector('.w-embed .np-select-display');
+        if (deptDisplay) {
+          deptDisplay.value = "";
+          deptDisplay.classList.add("placeholder");
+        }
+      }
+      delete deptSelect.dataset.npInitialized;
+      delete deptSelect.dataset.npAutocomplete;
+      if (npState.cityId) {
+        initNovaPostAutocomplete(deptSelect, function(query) {
+          if (!npState.cityId) return Promise.resolve([]);
+          return npSearchBranches(query, npState.cityId);
+        }, 2, function(limit) {
+          if (!npState.cityId) return Promise.resolve([]);
+          return npLoadInitialBranches(npState.cityId, limit);
+        });
+      }
     }
   });
 }
 
-if (addrSelect) {
-  function ensureStreetsLoaded() {
-    if (!npState.cityId) return;
-    if (!addrSelect.dataset.loaded) {
-      addrSelect.dataset.loaded = "1";
-      npLoadAllStreets();
-    }
-  }
-  addrSelect.addEventListener("focus", ensureStreetsLoaded);
-  addrSelect.addEventListener("click", ensureStreetsLoaded);
+if (addrSelect && !addrSelect.dataset.npInitialized && npState.cityId) {
+  addrSelect.dataset.npInitialized = "1";
+  initNovaPostAutocomplete(addrSelect, function(query) {
+    if (!npState.cityId) return Promise.resolve([]);
+    return npSearchStreets(query, npState.cityId);
+  }, 2, function(limit) {
+    if (!npState.cityId) return Promise.resolve([]);
+    return npLoadInitialStreets(npState.cityId, limit);
+  });
 }
 
-if (deptSelect) {
-  function ensureBranchesLoaded() {
-    if (!npState.cityId) return;
-    if (!deptSelect.dataset.loaded) {
-      deptSelect.dataset.loaded = "1";
-      npLoadAllBranches();
-    }
+if (deptSelect && !deptSelect.dataset.npInitialized && npState.cityId) {
+  deptSelect.dataset.npInitialized = "1";
+  initNovaPostAutocomplete(deptSelect, function(query) {
+    if (!npState.cityId) return Promise.resolve([]);
+    return npSearchBranches(query, npState.cityId);
+  }, 2, function(limit) {
+    if (!npState.cityId) return Promise.resolve([]);
+    return npLoadInitialBranches(npState.cityId, limit);
+  });
   }
-  deptSelect.addEventListener("focus", ensureBranchesLoaded);
-  deptSelect.addEventListener("click", ensureBranchesLoaded);
-}
 }
 
 function initDeliveryTypeToggle() {
-var deliveryStep = document.querySelector(".modal-step-esim.is--delivery");
-if (!deliveryStep) return;
-var radios = qsa('input[name="Delivery-Type"]', deliveryStep);
-var addrWrapper = qs(".modal-delivery_address-wrapper", deliveryStep);
-var addrContainer = qs(".modal-delivery_address", deliveryStep);
-var deptItem = qs(".modal-step-esim_item.is--department", deliveryStep);
+  var deliveryStep = document.querySelector(".modal-step-esim.is--delivery");
+  if (!deliveryStep) return;
+  var radios = qsa('input[name="Delivery-Type"]', deliveryStep);
+  var addrWrapper = qs(".modal-delivery_address-wrapper", deliveryStep);
+  var addrContainer = qs(".modal-delivery_address", deliveryStep);
+  var deptItem = qs(".modal-step-esim_item.is--department", deliveryStep);
 
-function applyState() {
-  var r = radios.find(function (x) {
-    return x.checked;
+  function applyState() {
+    var r = radios.find(function (x) {
+      return x.checked;
+    });
+    var val = r ? r.value : null;
+    if (!addrContainer || !addrWrapper || !deptItem) return;
+    if (!val) {
+      addrContainer.style.display = "none";
+      addrWrapper.style.display = "none";
+      deptItem.style.display = "none";
+      return;
+    }
+    addrContainer.style.display = "block";
+    if (val === "courier") {
+      addrWrapper.style.display = "flex";
+      deptItem.style.display = "none";
+    } else {
+      addrWrapper.style.display = "none";
+      deptItem.style.display = "block";
+    }
+  }
+
+  radios.forEach(function (r) {
+    r.addEventListener("change", applyState);
   });
-  var val = r ? r.value : null;
-  if (!addrContainer || !addrWrapper || !deptItem) return;
-  if (!val) {
-    addrContainer.style.display = "none";
-    addrWrapper.style.display = "none";
-    deptItem.style.display = "none";
-    return;
-  }
-  addrContainer.style.display = "block";
-  if (val === "courier") {
-    addrWrapper.style.display = "flex";
-    deptItem.style.display = "none";
-  } else {
-    addrWrapper.style.display = "none";
-    deptItem.style.display = "block";
-  }
-}
 
-radios.forEach(function (r) {
-  r.addEventListener("change", applyState);
-});
-
-applyState();
+  applyState();
 }
 
 function initDeliveryFormValidation() {
-var deliveryStep = document.querySelector(".modal-step-esim.is--delivery");
-if (!deliveryStep) return;
-var form = deliveryStep.closest("form");
-if (form)
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-  });
+  var deliveryStep = document.querySelector(".modal-step-esim.is--delivery");
+  if (!deliveryStep) return;
+  var form = deliveryStep.closest("form");
+  if (form)
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+    });
 
-var citySelect = qs("#City", deliveryStep);
-var phoneInput = qs("#delivery-phone", deliveryStep);
-var addrSelect = qs("#Address", deliveryStep);
-var deptSelect = qs("#Department", deliveryStep);
-var buildingInput = qs("#Building", deliveryStep);
-var flatInput = qs("#Flat", deliveryStep);
-var radios = qsa('input[name="Delivery-Type"]', deliveryStep);
-var nextBtn = qs(".button.is-validation", deliveryStep);
+  var citySelect = qs("#City", deliveryStep);
+  var phoneInput = qs("#delivery-phone", deliveryStep);
+  var addrSelect = qs("#Address", deliveryStep);
+  var deptSelect = qs("#Department", deliveryStep);
+  var buildingInput = qs("#Building", deliveryStep);
+  var flatInput = qs("#Flat", deliveryStep);
+  var radios = qsa('input[name="Delivery-Type"]', deliveryStep);
+  var nextBtn = qs(".button.is-validation", deliveryStep);
 
-bindPhoneMask(phoneInput);
+  bindPhoneMask(phoneInput);
 
-function getType() {
-  var r = radios.find(function (x) {
-    return x.checked;
-  });
-  return r ? r.value : null;
-}
-
-function validate() {
-  var cityOk = !!(citySelect && citySelect.value);
-  var phoneOk = isFullUaPhone(phoneInput);
-  var type = getType();
-  var addrOk = true;
-  var deptOk = true;
-  var buildingOk = true;
-  var flatOk = true;
-
-  if (type === "courier") {
-    addrOk = !!(addrSelect && addrSelect.value);
-    buildingOk = !!(buildingInput && buildingInput.value.trim());
-    flatOk = !!(flatInput && flatInput.value.trim());
-  } else if (type) {
-    deptOk = !!(deptSelect && deptSelect.value);
+  function getType() {
+    var r = radios.find(function (x) {
+      return x.checked;
+    });
+    return r ? r.value : null;
   }
 
-  citySelect && setFieldState(citySelect, cityOk ? true : null);
-  setFieldState(phoneInput, phoneOk ? true : null);
+  function validate() {
+    var cityOk = !!(citySelect && citySelect.value);
+    var phoneOk = isFullUaPhone(phoneInput);
+    var type = getType();
+    var addrOk = true;
+    var deptOk = true;
+    var buildingOk = true;
+    var flatOk = true;
 
-  if (type === "courier") {
-    addrSelect && setFieldState(addrSelect, addrOk ? true : null);
-    buildingInput && setFieldState(buildingInput, buildingOk ? true : null);
-    flatInput && setFieldState(flatInput, flatOk ? true : null);
-    deptSelect && deptSelect.classList.remove("error", "is-validated");
-  } else if (type) {
-    deptSelect && setFieldState(deptSelect, deptOk ? true : null);
-    addrSelect && addrSelect.classList.remove("error", "is-validated");
-    buildingInput &&
-      buildingInput.classList.remove("error", "is-validated");
-    flatInput && flatInput.classList.remove("error", "is-validated");
-  }
-
-  var allOk =
-    cityOk && phoneOk && type && addrOk && deptOk && buildingOk && flatOk;
-  disableButton(nextBtn, !allOk);
-}
-
-if (citySelect) citySelect.addEventListener("change", validate);
-if (phoneInput) {
-  phoneInput.addEventListener("input", validate);
-  phoneInput.addEventListener("change", validate);
-}
-radios.forEach(function (r) {
-  r.addEventListener("change", validate);
-});
-if (addrSelect) addrSelect.addEventListener("change", validate);
-if (deptSelect) deptSelect.addEventListener("change", validate);
-if (buildingInput) buildingInput.addEventListener("input", validate);
-if (flatInput) flatInput.addEventListener("input", validate);
-
-if (nextBtn) {
-  nextBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    validate();
-    if (nextBtn.disabled) return;
-    var deliveryDialog = deliveryStep.closest(".modal__dialog");
-    var paymentStep = qs(".modal-step-esim.is--payment", deliveryDialog);
-    if (deliveryStep && paymentStep) {
-      deliveryStep.style.display = "none";
-      deliveryStep.classList.remove("is-active");
-      paymentStep.style.display = "";
-      paymentStep.classList.add("is-active");
+    if (type === "courier") {
+      addrOk = !!(addrSelect && addrSelect.value);
+      buildingOk = !!(buildingInput && buildingInput.value.trim());
+      flatOk = !!(flatInput && flatInput.value.trim());
+    } else if (type) {
+      deptOk = !!(deptSelect && deptSelect.value);
     }
+
+    citySelect && setFieldState(citySelect, cityOk ? true : null);
+    setFieldState(phoneInput, phoneOk ? true : null);
+
+    if (type === "courier") {
+      addrSelect && setFieldState(addrSelect, addrOk ? true : null);
+      buildingInput && setFieldState(buildingInput, buildingOk ? true : null);
+      flatInput && setFieldState(flatInput, flatOk ? true : null);
+      deptSelect && deptSelect.classList.remove("error", "is-validated");
+    } else if (type) {
+      deptSelect && setFieldState(deptSelect, deptOk ? true : null);
+      addrSelect && addrSelect.classList.remove("error", "is-validated");
+      buildingInput &&
+        buildingInput.classList.remove("error", "is-validated");
+      flatInput && flatInput.classList.remove("error", "is-validated");
+    }
+
+    var allOk =
+      cityOk && phoneOk && type && addrOk && deptOk && buildingOk && flatOk;
+    disableButton(nextBtn, !allOk);
+  }
+
+  if (citySelect) citySelect.addEventListener("change", validate);
+  if (phoneInput) {
+    phoneInput.addEventListener("input", validate);
+    phoneInput.addEventListener("change", validate);
+  }
+  radios.forEach(function (r) {
+    r.addEventListener("change", validate);
   });
-}
-validate();
+  if (addrSelect) addrSelect.addEventListener("change", validate);
+  if (deptSelect) deptSelect.addEventListener("change", validate);
+  if (buildingInput) buildingInput.addEventListener("input", validate);
+  if (flatInput) flatInput.addEventListener("input", validate);
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      validate();
+      if (nextBtn.disabled) return;
+      var deliveryDialog = deliveryStep.closest(".modal__dialog");
+      var paymentStep = qs(".modal-step-esim.is--payment", deliveryDialog);
+      if (deliveryStep && paymentStep) {
+        deliveryStep.style.display = "none";
+        deliveryStep.classList.remove("is-active");
+        paymentStep.style.display = "";
+        paymentStep.classList.add("is-active");
+      }
+    });
+  }
+  validate();
 }
 
 function initGlobalPhoneMasks() {
-bindPhoneMask(document.getElementById("phone"));
-bindPhoneMask(document.getElementById("delivery-phone"));
+  bindPhoneMask(document.getElementById("phone"));
+  bindPhoneMask(document.getElementById("delivery-phone"));
 }
 
 // Проверяем, загружен ли DOM

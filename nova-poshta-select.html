@@ -1,0 +1,46 @@
+<!-- HTML структура для кастомного select с автокомплитом Nova Poshta -->
+<!-- Пример использования: -->
+
+<div class="modal-step-esim_item">
+  <label for="City" class="modal-step-esim_label">Місто *</label>
+  
+  <!-- Кастомный select wrapper -->
+  <div class="np-select-wrapper">
+    <!-- Видимый input (отображает выбранное значение) -->
+    <input 
+      type="text" 
+      class="modal-step-esim_input is-select np-select-display placeholder" 
+      placeholder="Введіть назву міста" 
+      data-np-display="City"
+      readonly
+    />
+    
+    <!-- Dropdown с поиском -->
+    <div class="np-select-dropdown">
+      <!-- Input для поиска -->
+      <input 
+        type="text" 
+        class="np-select-search" 
+        placeholder="Введіть для пошуку..."
+      />
+      
+      <!-- Список результатов -->
+       
+      <div class="np-select-results">
+        <!-- Результаты будут добавлены динамически через JS -->
+      </div>
+    </div>
+    
+    <!-- Нативный select (скрыт, используется для формы) -->
+    <select 
+      id="City" 
+      name="City" 
+      data-name="City" 
+      required 
+      class="modal-step-esim_input is-select w-select np-select-native"
+    >
+      <option value="">Введіть назву міста</option>
+    </select>
+  </div>
+</div>
+
