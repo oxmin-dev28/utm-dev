@@ -612,8 +612,11 @@ async function npLoadAllCities() {
   select.appendChild(ph);
   select.dataset.loading = "1";
   var page = 1;
-  var limit = 100;
-  while (true) {
+  var limit = 500;
+  var totalLoaded = 0;
+  var hasMore = true;
+  
+  while (hasMore) {
     var params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
@@ -623,26 +626,81 @@ async function npLoadAllCities() {
         API_BASE + "/delivery/novaPost/cities?" + params.toString()
       );
     } catch (e) {
-      console.log("NovaPoshta cities error:", e);
+      console.error("NovaPoshta cities error:", e);
       break;
     }
-    if (!data || !Array.isArray(data.payload) || !data.payload.length) break;
-    data.payload.forEach(function (item) {
+    
+    // Обработка разных форматов ответа API
+    var items = null;
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data && Array.isArray(data.payload)) {
+      items = data.payload;
+    } else if (data && Array.isArray(data.data)) {
+      items = data.data;
+    } else if (data && data.items && Array.isArray(data.items)) {
+      items = data.items;
+    }
+    
+    if (!items || !items.length) {
+      hasMore = false;
+      break;
+    }
+    
+    items.forEach(function (item) {
       var opt = document.createElement("option");
-      opt.value = item.id;
-      opt.textContent = item.name;
+      opt.value = item.id || item.Ref || item.ref;
+      opt.textContent = item.name || item.Description || item.description;
       select.appendChild(opt);
     });
-    // согласно документации API ([Delivery → NovaPost → cities](/docs/public#/)),
-    // сервер возвращает meta.totalPages – используем её, а если нет, то fallback по длине
-    if (data.meta && typeof data.meta.totalPages === "number") {
-      if (page >= data.meta.totalPages) break;
-      page++;
+    
+    totalLoaded += items.length;
+    console.log("NovaPoshta cities: loaded page", page, "-", items.length, "items (total:", totalLoaded, ")");
+    
+    // Проверка наличия следующей страницы
+    var totalPages = null;
+    var currentPage = null;
+    var totalCount = null;
+    
+    if (data.meta) {
+      totalPages = data.meta.totalPages;
+      currentPage = data.meta.currentPage || data.meta.page;
+      totalCount = data.meta.totalCount || data.meta.total;
+    } else if (data.pagination) {
+      totalPages = data.pagination.totalPages;
+      currentPage = data.pagination.currentPage || data.pagination.page;
+      totalCount = data.pagination.totalCount || data.pagination.total;
+    }
+    
+    if (totalPages !== null && typeof totalPages === "number") {
+      if (page >= totalPages) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    } else if (totalCount !== null && typeof totalCount === "number") {
+      if (totalLoaded >= totalCount) {
+        hasMore = false;
+      } else {
+        page++;
+      }
     } else {
-      if (data.payload.length < limit) break;
-      page++;
+      // Fallback: если получили меньше элементов, чем лимит, значит это последняя страница
+      if (items.length < limit) {
+        hasMore = false;
+      } else {
+        // Если получили ровно limit элементов, делаем еще один запрос для проверки
+        page++;
+        // Защита от бесконечного цикла
+        if (page > 1000) {
+          console.warn("NovaPoshta cities: reached max pages limit (1000)");
+          hasMore = false;
+        }
+      }
     }
   }
+  
+  console.log("NovaPoshta cities: finished loading, total cities:", totalLoaded);
   delete select.dataset.loading;
 }
 
@@ -660,8 +718,11 @@ async function npLoadAllStreets() {
   select.appendChild(ph);
   select.dataset.loading = "1";
   var page = 1;
-  var limit = 100;
-  while (true) {
+  var limit = 500;
+  var totalLoaded = 0;
+  var hasMore = true;
+  
+  while (hasMore) {
     var params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
@@ -672,24 +733,69 @@ async function npLoadAllStreets() {
         API_BASE + "/delivery/novaPost/streets?" + params.toString()
       );
     } catch (e) {
-      console.log("NovaPoshta streets error:", e);
+      console.error("NovaPoshta streets error:", e);
       break;
     }
-    if (!data || !Array.isArray(data.payload) || !data.payload.length) break;
-    data.payload.forEach(function (item) {
+    
+    var items = null;
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data && Array.isArray(data.payload)) {
+      items = data.payload;
+    } else if (data && Array.isArray(data.data)) {
+      items = data.data;
+    } else if (data && data.items && Array.isArray(data.items)) {
+      items = data.items;
+    }
+    
+    if (!items || !items.length) {
+      hasMore = false;
+      break;
+    }
+    
+    items.forEach(function (item) {
       var opt = document.createElement("option");
-      opt.value = item.id;
-      opt.textContent = item.name;
+      opt.value = item.id || item.Ref || item.ref;
+      opt.textContent = item.name || item.Description || item.description;
       select.appendChild(opt);
     });
-    if (data.meta && typeof data.meta.totalPages === "number") {
-      if (page >= data.meta.totalPages) break;
-      page++;
+    
+    totalLoaded += items.length;
+    
+    var totalPages = null;
+    var totalCount = null;
+    if (data.meta) {
+      totalPages = data.meta.totalPages;
+      totalCount = data.meta.totalCount || data.meta.total;
+    } else if (data.pagination) {
+      totalPages = data.pagination.totalPages;
+      totalCount = data.pagination.totalCount || data.pagination.total;
+    }
+    
+    if (totalPages !== null && typeof totalPages === "number") {
+      if (page >= totalPages) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    } else if (totalCount !== null && typeof totalCount === "number") {
+      if (totalLoaded >= totalCount) {
+        hasMore = false;
+      } else {
+        page++;
+      }
     } else {
-      if (data.payload.length < limit) break;
-      page++;
+      if (items.length < limit) {
+        hasMore = false;
+      } else {
+        page++;
+        if (page > 1000) {
+          hasMore = false;
+        }
+      }
     }
   }
+  
   delete select.dataset.loading;
 }
 
@@ -709,8 +815,11 @@ async function npLoadAllBranches() {
   select.appendChild(ph);
   select.dataset.loading = "1";
   var page = 1;
-  var limit = 100;
-  while (true) {
+  var limit = 500;
+  var totalLoaded = 0;
+  var hasMore = true;
+  
+  while (hasMore) {
     var params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
@@ -721,24 +830,69 @@ async function npLoadAllBranches() {
         API_BASE + "/delivery/novaPost/branches?" + params.toString()
       );
     } catch (e) {
-      console.log("NovaPoshta branches error:", e);
+      console.error("NovaPoshta branches error:", e);
       break;
     }
-    if (!data || !Array.isArray(data.payload) || !data.payload.length) break;
-    data.payload.forEach(function (item) {
+    
+    var items = null;
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data && Array.isArray(data.payload)) {
+      items = data.payload;
+    } else if (data && Array.isArray(data.data)) {
+      items = data.data;
+    } else if (data && data.items && Array.isArray(data.items)) {
+      items = data.items;
+    }
+    
+    if (!items || !items.length) {
+      hasMore = false;
+      break;
+    }
+    
+    items.forEach(function (item) {
       var opt = document.createElement("option");
-      opt.value = item.id;
-      opt.textContent = item.name;
+      opt.value = item.id || item.Ref || item.ref;
+      opt.textContent = item.name || item.Description || item.description;
       select.appendChild(opt);
     });
-    if (data.meta && typeof data.meta.totalPages === "number") {
-      if (page >= data.meta.totalPages) break;
-      page++;
+    
+    totalLoaded += items.length;
+    
+    var totalPages = null;
+    var totalCount = null;
+    if (data.meta) {
+      totalPages = data.meta.totalPages;
+      totalCount = data.meta.totalCount || data.meta.total;
+    } else if (data.pagination) {
+      totalPages = data.pagination.totalPages;
+      totalCount = data.pagination.totalCount || data.pagination.total;
+    }
+    
+    if (totalPages !== null && typeof totalPages === "number") {
+      if (page >= totalPages) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    } else if (totalCount !== null && typeof totalCount === "number") {
+      if (totalLoaded >= totalCount) {
+        hasMore = false;
+      } else {
+        page++;
+      }
     } else {
-      if (data.payload.length < limit) break;
-      page++;
+      if (items.length < limit) {
+        hasMore = false;
+      } else {
+        page++;
+        if (page > 1000) {
+          hasMore = false;
+        }
+      }
     }
   }
+  
   delete select.dataset.loading;
 }
 
