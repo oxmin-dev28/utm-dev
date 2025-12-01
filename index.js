@@ -129,11 +129,13 @@ if (wrapper.querySelector(".phone-mask-overlay")) {
 var overlay = document.createElement("div");
 overlay.className = "phone-mask-overlay";
 var inputStyle = window.getComputedStyle(input);
-overlay.style.cssText = "position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; display: flex; align-items: center; padding-left: " + inputStyle.paddingLeft + "; padding-right: " + inputStyle.paddingRight + "; padding-top: " + inputStyle.paddingTop + "; padding-bottom: " + inputStyle.paddingBottom + "; font-size: " + inputStyle.fontSize + "; font-family: " + inputStyle.fontFamily + "; line-height: " + inputStyle.lineHeight + "; white-space: nowrap; overflow: hidden; box-sizing: border-box; border: 1px solid transparent;";
+var inputBorderWidth = inputStyle.borderWidth || "0px";
+overlay.style.cssText = "position: absolute; left: " + inputBorderWidth + "; top: " + inputBorderWidth + "; right: " + inputBorderWidth + "; bottom: " + inputBorderWidth + "; pointer-events: none; display: flex; align-items: center; padding-left: " + inputStyle.paddingLeft + "; padding-right: " + inputStyle.paddingRight + "; padding-top: " + inputStyle.paddingTop + "; padding-bottom: " + inputStyle.paddingBottom + "; font-size: " + inputStyle.fontSize + "; font-family: " + inputStyle.fontFamily + "; line-height: " + inputStyle.lineHeight + "; white-space: nowrap; overflow: hidden; box-sizing: border-box;";
 wrapper.style.position = "relative";
+input.style.boxSizing = "border-box";
 
 var prefixSpan = document.createElement("span");
-prefixSpan.style.cssText = "color: #000;";
+prefixSpan.style.cssText = "color: #000; margin-right: .25rem;";
 var formattedSpan = document.createElement("span");
 formattedSpan.style.cssText = "color: #999;";
 var cursorSpan = document.createElement("span");
@@ -164,11 +166,11 @@ input.setAttribute("autocapitalize", "off");
 input.setAttribute("spellcheck", "false");
 
 function getCursorPositionInFormatted(inputPos, digits) {
-  var prefix = "+380 ";
+  var prefix = "+380";
   if (inputPos === 0) {
-    return prefix.length + 1;
+    return prefix.length + 2;
   }
-  var pos = prefix.length + 1;
+  var pos = prefix.length + 2;
   if (inputPos > 0) {
     pos += Math.min(inputPos, 2);
     if (inputPos >= 2) {
