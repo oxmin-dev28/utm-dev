@@ -633,8 +633,15 @@ async function npLoadAllCities() {
       opt.textContent = item.name;
       select.appendChild(opt);
     });
-    if (data.payload.length < limit) break;
-    page++;
+    // согласно документации API ([Delivery → NovaPost → cities](/docs/public#/)),
+    // сервер возвращает meta.totalPages – используем её, а если нет, то fallback по длине
+    if (data.meta && typeof data.meta.totalPages === "number") {
+      if (page >= data.meta.totalPages) break;
+      page++;
+    } else {
+      if (data.payload.length < limit) break;
+      page++;
+    }
   }
   delete select.dataset.loading;
 }
@@ -675,8 +682,13 @@ async function npLoadAllStreets() {
       opt.textContent = item.name;
       select.appendChild(opt);
     });
-    if (data.payload.length < limit) break;
-    page++;
+    if (data.meta && typeof data.meta.totalPages === "number") {
+      if (page >= data.meta.totalPages) break;
+      page++;
+    } else {
+      if (data.payload.length < limit) break;
+      page++;
+    }
   }
   delete select.dataset.loading;
 }
@@ -719,8 +731,13 @@ async function npLoadAllBranches() {
       opt.textContent = item.name;
       select.appendChild(opt);
     });
-    if (data.payload.length < limit) break;
-    page++;
+    if (data.meta && typeof data.meta.totalPages === "number") {
+      if (page >= data.meta.totalPages) break;
+      page++;
+    } else {
+      if (data.payload.length < limit) break;
+      page++;
+    }
   }
   delete select.dataset.loading;
 }
