@@ -1,4 +1,5 @@
 (function () {
+console.log("[UTM] Script loaded and executing...");
 var API_BASE = "https://api-staging.utm.net.ua";
 
 function qs(sel, root) {
@@ -155,10 +156,17 @@ function initModalSystem() {
   }
 
   function openModalByDialogId(dialogId) {
+    console.log("[UTM] openModalByDialogId called with:", dialogId);
     var dlg = document.getElementById(dialogId);
-    if (!dlg) return;
+    if (!dlg) {
+      console.warn("[UTM] Dialog not found:", dialogId);
+      return;
+    }
     var wrapper = dlg.closest(".modal");
-    if (!wrapper) return;
+    if (!wrapper) {
+      console.warn("[UTM] Modal wrapper not found for dialog:", dialogId);
+      return;
+    }
 
     qsa(".modal.is-open").forEach(function (m) {
       closeModal(m);
@@ -171,11 +179,21 @@ function initModalSystem() {
     resetSteps(dlg);
     
     // Инициализируем NovaPoshta селекты при открытии модального окна с доставкой
+    console.log("[UTM] Checking if modal is plastic delivery. dialogId:", dialogId, "dlg.id:", dlg.id);
     if (dialogId === "modal-plastic" || dlg.id === "modal-plastic") {
-      console.log("[NovaPoshta] Modal plastic opened, initializing NovaPoshta selects");
+      console.log("[NovaPoshta] Modal plastic opened via openModalByDialogId, initializing NovaPoshta selects");
       setTimeout(function() {
         initNovaPostSelects();
       }, 100);
+    } else {
+      // Проверяем, есть ли внутри этого диалога селект City
+      var citySelect = dlg.querySelector("#City");
+      if (citySelect) {
+        console.log("[NovaPoshta] Found City select in opened modal, initializing NovaPoshta selects");
+        setTimeout(function() {
+          initNovaPostSelects();
+        }, 100);
+      }
     }
   }
 
@@ -505,10 +523,12 @@ function initEsimOrderModal() {
         }
       } else {
         // Пластиковая SIM перекидывается в модалку доставки
+        console.log("[UTM] Switching to plastic delivery modal");
         var wrapper = dialog.closest(".modal");
         if (wrapper) {
           var plasticDialog = qs(".modal__dialog.modal--md", wrapper);
           if (plasticDialog) {
+            console.log("[UTM] Found plastic dialog, switching to it");
             dialog.classList.remove("is-open");
             plasticDialog.classList.add("is-open");
             modalApi.resetSteps(plasticDialog);
@@ -517,7 +537,11 @@ function initEsimOrderModal() {
             setTimeout(function() {
               initNovaPostSelects();
             }, 100);
+          } else {
+            console.warn("[UTM] Plastic dialog not found!");
           }
+        } else {
+          console.warn("[UTM] Modal wrapper not found!");
         }
       }
     });
@@ -1146,15 +1170,37 @@ function initGlobalPhoneMasks() {
   bindPhoneMask(document.getElementById("delivery-phone"));
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+// Проверяем, загружен ли DOM
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initAll);
+} else {
+  // DOM уже загружен
+  initAll();
+}
+
+function initAll() {
   console.log("[UTM] DOMContentLoaded: initializing all modules...");
-  initGlobalPhoneMasks();
-  initPlanSelection();
-  initTopUpModal();
-  initEsimOrderModal();
-  initNovaPostSelects();
-  initDeliveryTypeToggle();
-  initDeliveryFormValidation();
-  console.log("[UTM] DOMContentLoaded: all modules initialized");
+  try {
+    initGlobalPhoneMasks();
+    initPlanSelection();
+    initTopUpModal();
+    initEsimOrderModal();
+    initNovaPostSelects();
+    initDeliveryTypeToggle();
+    initDeliveryFormValidation();
+    console.log("[UTM] DOMContentLoaded: all modules initialized");
+  } catch (e) {
+    console.error("[UTM] Error during initialization:", e);
+  }
+}
+
+// Также пробуем инициализировать при полной загрузке страницы
+window.addEventListener("load", function() {
+  console.log("[UTM] Window loaded, checking NovaPoshta selects...");
+  var citySelect = document.getElementById("City");
+  if (citySelect) {
+    console.log("[UTM] City select found on window load, re-initializing NovaPoshta");
+    initNovaPostSelects();
+  }
 });
 })();
