@@ -1316,3 +1316,5 @@ $(document).on('click', '.modal-form-button', function () {
   });
 });
 })();
+
+console.log("[UTM] Script loaded and executed");
