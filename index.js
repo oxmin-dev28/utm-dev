@@ -130,9 +130,14 @@ var overlay = document.createElement("div");
 overlay.className = "phone-mask-overlay";
 var inputStyle = window.getComputedStyle(input);
 var inputBorderWidth = inputStyle.borderWidth || "0px";
-overlay.style.cssText = "position: absolute; left: " + inputBorderWidth + "; top: " + inputBorderWidth + "; right: " + inputBorderWidth + "; bottom: " + inputBorderWidth + "; pointer-events: none; display: flex; align-items: center; padding-left: " + inputStyle.paddingLeft + "; padding-right: " + inputStyle.paddingRight + "; padding-top: " + inputStyle.paddingTop + "; padding-bottom: " + inputStyle.paddingBottom + "; font-size: " + inputStyle.fontSize + "; font-family: " + inputStyle.fontFamily + "; line-height: " + inputStyle.lineHeight + "; white-space: nowrap; overflow: hidden; box-sizing: border-box;";
+overlay.style.cssText = "position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; display: flex; align-items: center; padding-left: " + inputStyle.paddingLeft + "; padding-right: " + inputStyle.paddingRight + "; padding-top: " + inputStyle.paddingTop + "; padding-bottom: " + inputStyle.paddingBottom + "; font-size: " + inputStyle.fontSize + "; font-family: " + inputStyle.fontFamily + "; line-height: " + inputStyle.lineHeight + "; white-space: nowrap; overflow: hidden; box-sizing: border-box;";
 wrapper.style.position = "relative";
 input.style.boxSizing = "border-box";
+var originalBorder = inputStyle.border || "none";
+var originalBorderWidth = inputStyle.borderWidth || "0px";
+if (originalBorderWidth === "0px" || !originalBorderWidth) {
+  input.style.border = "1px solid transparent";
+}
 
 var prefixSpan = document.createElement("span");
 prefixSpan.style.cssText = "color: #000; margin-right: .25rem;";
@@ -160,11 +165,12 @@ input.style.caretColor = "transparent";
 input.style.backgroundColor = "transparent";
 var computedStyle = window.getComputedStyle(input);
 var borderWidth = computedStyle.borderWidth || "1px";
-if (!input.style.borderWidth) {
-  input.style.borderWidth = borderWidth;
-  input.style.borderStyle = computedStyle.borderStyle || "solid";
-  input.style.borderColor = "transparent";
-}
+var borderStyle = computedStyle.borderStyle || "solid";
+var borderColor = computedStyle.borderColor || "transparent";
+input.style.borderWidth = borderWidth;
+input.style.borderStyle = borderStyle;
+input.style.borderColor = borderColor;
+input.style.outline = "none";
 input.setAttribute("placeholder", "");
 input.setAttribute("maxlength", "9");
 input.setAttribute("inputmode", "tel");
@@ -174,12 +180,12 @@ input.setAttribute("autocapitalize", "off");
 input.setAttribute("spellcheck", "false");
 
 function getCursorPositionInFormatted(inputPos, digits) {
-  var prefix = "+380";
   if (inputPos === 0) {
-    return prefix.length + 2;
+    return 0;
   }
-  var pos = prefix.length + 2;
+  var pos = 0;
   if (inputPos > 0) {
+    pos += 1;
     pos += Math.min(inputPos, 2);
     if (inputPos >= 2) {
       pos += 3;
@@ -215,12 +221,7 @@ function updateOverlay() {
   var isFocused = input === document.activeElement;
   if (isFocused) {
     var inputCursorPos = input.selectionStart !== undefined ? input.selectionStart : digits.length;
-    if (inputCursorPos === 0) {
-      cursorPosInFormatted = 0;
-    } else {
-      var fullPos = getCursorPositionInFormatted(inputCursorPos, digits);
-      cursorPosInFormatted = fullPos - fmt.prefix.length;
-    }
+    cursorPosInFormatted = getCursorPositionInFormatted(inputCursorPos, digits);
     cursorSpan.style.display = "inline-block";
   } else {
     cursorSpan.style.display = "none";
@@ -1418,8 +1419,21 @@ function addItemToSelect(item, addToDropdown) {
       select.value = value;
       updateDisplay();
       hideDropdown();
-      var changeEvent = new Event("change", { bubbles: true });
-      select.dispatchEvent(changeEvent);
+      setTimeout(function() {
+        var changeEvent = new Event("change", { bubbles: true, cancelable: true });
+        select.dispatchEvent(changeEvent);
+        var inputEvent = new Event("input", { bubbles: true, cancelable: true });
+        select.dispatchEvent(inputEvent);
+        if (select.id === "City" || select.id === "Address" || select.id === "Department") {
+          var deliveryStep = select.closest(".modal-step-esim.is--delivery");
+          if (deliveryStep) {
+            var nextBtn = deliveryStep.querySelector(".button.is-validation");
+            if (nextBtn && typeof window.deliveryFormValidate === "function") {
+              window.deliveryFormValidate();
+            }
+          }
+        }
+      }, 10);
     });
 
     return itemDiv;
@@ -1466,8 +1480,21 @@ function showInitialItems() {
         select.value = this.dataset.value;
         updateDisplay();
         hideDropdown();
-        var changeEvent = new Event("change", { bubbles: true });
-        select.dispatchEvent(changeEvent);
+        setTimeout(function() {
+          var changeEvent = new Event("change", { bubbles: true, cancelable: true });
+          select.dispatchEvent(changeEvent);
+          var inputEvent = new Event("input", { bubbles: true, cancelable: true });
+          select.dispatchEvent(inputEvent);
+          if (select.id === "City" || select.id === "Address" || select.id === "Department") {
+            var deliveryStep = select.closest(".modal-step-esim.is--delivery");
+            if (deliveryStep) {
+              var nextBtn = deliveryStep.querySelector(".button.is-validation");
+              if (nextBtn && typeof window.deliveryFormValidate === "function") {
+                window.deliveryFormValidate();
+              }
+            }
+          }
+        }, 10);
       });
 
       resultsList.appendChild(itemDiv);
@@ -1830,8 +1857,13 @@ function initDeliveryFormValidation() {
       cityOk && phoneOk && type && addrOk && deptOk && buildingOk && flatOk;
     disableButton(nextBtn, !allOk);
   }
+  
+  window.deliveryFormValidate = validate;
 
-  if (citySelect) citySelect.addEventListener("change", validate);
+  if (citySelect) {
+    citySelect.addEventListener("change", validate);
+    citySelect.addEventListener("input", validate);
+  }
   if (phoneInput) {
     phoneInput.addEventListener("input", validate);
     phoneInput.addEventListener("change", validate);
@@ -1839,8 +1871,14 @@ function initDeliveryFormValidation() {
   radios.forEach(function (r) {
     r.addEventListener("change", validate);
   });
-  if (addrSelect) addrSelect.addEventListener("change", validate);
-  if (deptSelect) deptSelect.addEventListener("change", validate);
+  if (addrSelect) {
+    addrSelect.addEventListener("change", validate);
+    addrSelect.addEventListener("input", validate);
+  }
+  if (deptSelect) {
+    deptSelect.addEventListener("change", validate);
+    deptSelect.addEventListener("input", validate);
+  }
   if (buildingInput) buildingInput.addEventListener("input", validate);
   if (flatInput) flatInput.addEventListener("input", validate);
 
@@ -1850,7 +1888,7 @@ function initDeliveryFormValidation() {
       validate();
       if (nextBtn.disabled) return;
       var deliveryDialog = deliveryStep.closest(".modal__dialog");
-      var paymentStep = qs(".modal-step-esim.is--payment", deliveryDialog);
+      var paymentStep = qs('[data-step="plastic-oplata"]', deliveryDialog) || qs(".modal-step-esim.is--payment", deliveryDialog) || qs(".modal-step-esim.is--1", deliveryDialog);
       if (deliveryStep && paymentStep) {
         deliveryStep.style.display = "none";
         deliveryStep.classList.remove("is-active");
@@ -1860,6 +1898,119 @@ function initDeliveryFormValidation() {
     });
   }
   validate();
+}
+
+function saveOrderData(formData) {
+  try {
+    var orderData = {
+      timestamp: new Date().toISOString(),
+      firstName: formData.get("first-name") || "",
+      lastName: formData.get("last-name") || "",
+      email: formData.get("email") || "",
+      plan: formData.get("plan") || "",
+      price: formData.get("price") || "",
+      simType: formData.get("sim_type") || "",
+      city: formData.get("City") || "",
+      deliveryPhone: formData.get("delivery-phone") || "",
+      deliveryType: formData.get("Delivery-Type") || "",
+      address: formData.get("Address") || "",
+      building: formData.get("Building") || "",
+      flat: formData.get("Flat") || "",
+      department: formData.get("Department") || ""
+    };
+    
+    var savedOrders = JSON.parse(localStorage.getItem("utm_orders") || "[]");
+    savedOrders.push(orderData);
+    localStorage.setItem("utm_orders", JSON.stringify(savedOrders));
+    
+    console.log("[UTM] Order data saved:", orderData);
+    return orderData;
+  } catch (e) {
+    console.error("[UTM] Error saving order data:", e);
+    return null;
+  }
+}
+
+function processCity24Payment(orderData, callback) {
+  console.log("[City24] Processing payment for order:", orderData);
+  
+  setTimeout(function() {
+    var paymentResult = {
+      success: true,
+      orderId: "CITY24-" + Date.now(),
+      transactionId: "TXN-" + Math.random().toString(36).substr(2, 9).toUpperCase(),
+      amount: orderData.price || "299",
+      currency: "UAH",
+      status: "completed",
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log("[City24] Payment processed:", paymentResult);
+    
+    if (callback) {
+      callback(paymentResult);
+    }
+  }, 2000);
+}
+
+function initPlasticPayment() {
+  var plasticDialog = document.getElementById("modal-plastic");
+  if (!plasticDialog) return;
+  
+  var paymentStep = qs('[data-step="plastic-oplata"]', plasticDialog) || qs(".modal-step-esim.is--1", plasticDialog);
+  if (!paymentStep) return;
+  
+  var paymentBtn = qs(".button.is-validation", paymentStep);
+  if (!paymentBtn) return;
+  
+  var form = plasticDialog.querySelector("form");
+  if (!form) return;
+  
+  paymentBtn.addEventListener("click", function(e) {
+    e.preventDefault();
+    
+    if (paymentBtn.disabled) return;
+    
+    var formData = new FormData(form);
+    var orderData = saveOrderData(formData);
+    
+    if (!orderData) {
+      console.error("[UTM] Failed to save order data");
+      return;
+    }
+    
+    disableButton(paymentBtn, true);
+    paymentBtn.textContent = "Обробка оплати...";
+    
+    processCity24Payment(orderData, function(paymentResult) {
+      if (paymentResult && paymentResult.success) {
+        var successStep = qs(".modal-success", plasticDialog);
+        if (successStep) {
+          paymentStep.style.display = "none";
+          paymentStep.classList.remove("is-active");
+          successStep.style.display = "";
+          successStep.classList.add("is-active");
+          
+          setTimeout(function() {
+            if (successStep.querySelector(".modal-relink-text a")) {
+              var redirectUrl = "https://city24.ua/payment/success?orderId=" + paymentResult.orderId;
+              successStep.querySelector(".modal-relink-text a").href = redirectUrl;
+            }
+          }, 0);
+        }
+      } else {
+        var errorStep = qs(".modal-error-esim", plasticDialog);
+        if (errorStep) {
+          paymentStep.style.display = "none";
+          paymentStep.classList.remove("is-active");
+          errorStep.style.display = "";
+          errorStep.classList.add("is-active");
+        }
+        disableButton(paymentBtn, false);
+        paymentBtn.textContent = "Оплатити";
+      }
+    });
+  });
 }
 
 function initGlobalPhoneMasks() {
@@ -1885,6 +2036,7 @@ try {
   initNovaPostSelects();
   initDeliveryTypeToggle();
   initDeliveryFormValidation();
+  initPlasticPayment();
   console.log("[UTM] DOMContentLoaded: all modules initialized");
 } catch (e) {
   console.error("[UTM] Error during initialization:", e);
