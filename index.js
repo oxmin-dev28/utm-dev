@@ -504,6 +504,98 @@ function initPlanSelection() {
       orderState.planPrice = priceEl ? priceEl.textContent.trim() : "";
     });
   });
+  
+  function handlePlanButtonClick(e) {
+    var btn = e.target.closest('a.button, button.button, .button');
+    if (!btn) return;
+    
+    var btnText = btn.textContent.trim();
+    if (btnText.indexOf("Обрати тариф") < 0 && btnText.indexOf("Обрати") < 0) {
+      return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("[PlanSelection] Button clicked:", btnText);
+    
+    var planModal = document.getElementById("modal-plan");
+    if (!planModal) {
+      console.warn("[PlanSelection] modal-plan not found");
+      return;
+    }
+    
+    var card = btn.closest(".pricing_content") || btn.closest(".plan_item--bshadow") || btn.closest(".w-dyn-item");
+    if (!card) {
+      console.warn("[PlanSelection] Card not found");
+      return;
+    }
+    
+    console.log("[PlanSelection] Card found");
+    var nameEl = qs(".pricing_plan-name", card);
+    var priceEl = qs(".pricing_plan-price", card);
+    
+    if (nameEl) {
+      orderState.planName = nameEl.textContent.trim();
+      console.log("[PlanSelection] Plan name:", orderState.planName);
+    }
+    if (priceEl) {
+      var priceText = priceEl.textContent.trim();
+      orderState.planPrice = priceText;
+      console.log("[PlanSelection] Plan price:", orderState.planPrice);
+    }
+    
+    var planForm = planModal.querySelector("form");
+    if (planForm) {
+      var planInput = planForm.querySelector('input[name="plan"]');
+      var priceInput = planForm.querySelector('input[name="price"]');
+      if (planInput && orderState.planName) {
+        planInput.value = orderState.planName;
+      }
+      if (priceInput && orderState.planPrice) {
+        priceInput.value = orderState.planPrice;
+      }
+    }
+    
+    var planWrapper = planModal.closest(".modal");
+    if (!planWrapper) {
+      console.warn("[PlanSelection] Modal wrapper not found");
+      return;
+    }
+    
+    var orderDialog = document.getElementById("modal-order");
+    if (!orderDialog) {
+      console.warn("[PlanSelection] modal-order not found");
+      return;
+    }
+    
+    console.log("[PlanSelection] Hiding modal-plan and showing modal-order");
+    planModal.classList.remove("is-open");
+    orderDialog.classList.add("is-open");
+    
+    var stepSelectType = qs(".modal-step-esim.is--select-type-sim", orderDialog);
+    if (stepSelectType) {
+      var allSteps = qsa(".modal-step-esim, .modal-success, .modal-error-esim", orderDialog);
+      allSteps.forEach(function(step) {
+        step.style.display = "none";
+        step.classList.remove("is-active");
+      });
+      stepSelectType.style.display = "";
+      stepSelectType.classList.add("is-active");
+      console.log("[PlanSelection] Switched to select-type-sim step");
+    } else {
+      console.warn("[PlanSelection] select-type-sim step not found");
+    }
+  }
+  
+  document.addEventListener("click", function(e) {
+    var planModal = document.getElementById("modal-plan");
+    if (planModal && planModal.classList.contains("is-open")) {
+      var btn = e.target.closest('a.button, button.button, .button');
+      if (btn && planModal.contains(btn)) {
+        handlePlanButtonClick(e);
+      }
+    }
+  });
 }
 
 function initTopUpModal() {
@@ -1426,11 +1518,10 @@ function addItemToSelect(item, addToDropdown) {
         select.dispatchEvent(inputEvent);
         if (select.id === "City" || select.id === "Address" || select.id === "Department") {
           var deliveryStep = select.closest(".modal-step-esim.is--delivery");
-          if (deliveryStep) {
-            var nextBtn = deliveryStep.querySelector(".button.is-validation");
-            if (nextBtn && typeof window.deliveryFormValidate === "function") {
+          if (deliveryStep && typeof window.deliveryFormValidate === "function") {
+            setTimeout(function() {
               window.deliveryFormValidate();
-            }
+            }, 50);
           }
         }
       }, 10);
@@ -1487,11 +1578,10 @@ function showInitialItems() {
           select.dispatchEvent(inputEvent);
           if (select.id === "City" || select.id === "Address" || select.id === "Department") {
             var deliveryStep = select.closest(".modal-step-esim.is--delivery");
-            if (deliveryStep) {
-              var nextBtn = deliveryStep.querySelector(".button.is-validation");
-              if (nextBtn && typeof window.deliveryFormValidate === "function") {
+            if (deliveryStep && typeof window.deliveryFormValidate === "function") {
+              setTimeout(function() {
                 window.deliveryFormValidate();
-              }
+              }, 50);
             }
           }
         }, 10);
@@ -1820,6 +1910,27 @@ function initDeliveryFormValidation() {
     return r ? r.value : null;
   }
 
+  function updateRequiredFields() {
+    var type = getType();
+    
+    if (type === "courier") {
+      if (addrSelect) addrSelect.setAttribute("required", "required");
+      if (buildingInput) buildingInput.setAttribute("required", "required");
+      if (flatInput) flatInput.setAttribute("required", "required");
+      if (deptSelect) deptSelect.removeAttribute("required");
+    } else if (type === "pickup") {
+      if (deptSelect) deptSelect.setAttribute("required", "required");
+      if (addrSelect) addrSelect.removeAttribute("required");
+      if (buildingInput) buildingInput.removeAttribute("required");
+      if (flatInput) flatInput.removeAttribute("required");
+    } else {
+      if (addrSelect) addrSelect.removeAttribute("required");
+      if (buildingInput) buildingInput.removeAttribute("required");
+      if (flatInput) flatInput.removeAttribute("required");
+      if (deptSelect) deptSelect.removeAttribute("required");
+    }
+  }
+
   function validate() {
     var cityOk = !!(citySelect && citySelect.value);
     var phoneOk = isFullUaPhone(phoneInput);
@@ -1833,8 +1944,12 @@ function initDeliveryFormValidation() {
       addrOk = !!(addrSelect && addrSelect.value);
       buildingOk = !!(buildingInput && buildingInput.value.trim());
       flatOk = !!(flatInput && flatInput.value.trim());
-    } else if (type) {
+      deptOk = true;
+    } else if (type === "pickup") {
       deptOk = !!(deptSelect && deptSelect.value);
+      addrOk = true;
+      buildingOk = true;
+      flatOk = true;
     }
 
     citySelect && setFieldState(citySelect, cityOk ? true : null);
@@ -1845,7 +1960,7 @@ function initDeliveryFormValidation() {
       buildingInput && setFieldState(buildingInput, buildingOk ? true : null);
       flatInput && setFieldState(flatInput, flatOk ? true : null);
       deptSelect && deptSelect.classList.remove("error", "is-validated");
-    } else if (type) {
+    } else if (type === "pickup") {
       deptSelect && setFieldState(deptSelect, deptOk ? true : null);
       addrSelect && addrSelect.classList.remove("error", "is-validated");
       buildingInput &&
@@ -1855,9 +1970,21 @@ function initDeliveryFormValidation() {
 
     var allOk =
       cityOk && phoneOk && type && addrOk && deptOk && buildingOk && flatOk;
+    
+    console.log("[DeliveryForm] Validation:", {
+      cityOk: cityOk,
+      phoneOk: phoneOk,
+      type: type,
+      addrOk: addrOk,
+      deptOk: deptOk,
+      buildingOk: buildingOk,
+      flatOk: flatOk,
+      allOk: allOk
+    });
+    
     disableButton(nextBtn, !allOk);
   }
-  
+
   window.deliveryFormValidate = validate;
 
   if (citySelect) {
@@ -1869,8 +1996,13 @@ function initDeliveryFormValidation() {
     phoneInput.addEventListener("change", validate);
   }
   radios.forEach(function (r) {
-    r.addEventListener("change", validate);
+    r.addEventListener("change", function() {
+      updateRequiredFields();
+      validate();
+    });
   });
+  
+  updateRequiredFields();
   if (addrSelect) {
     addrSelect.addEventListener("change", validate);
     addrSelect.addEventListener("input", validate);
@@ -1890,6 +2022,7 @@ function initDeliveryFormValidation() {
       var deliveryDialog = deliveryStep.closest(".modal__dialog");
       var paymentStep = qs('[data-step="plastic-oplata"]', deliveryDialog) || qs(".modal-step-esim.is--payment", deliveryDialog) || qs(".modal-step-esim.is--1", deliveryDialog);
       if (deliveryStep && paymentStep) {
+        updatePaymentStepData(deliveryStep, paymentStep);
         deliveryStep.style.display = "none";
         deliveryStep.classList.remove("is-active");
         paymentStep.style.display = "";
@@ -1898,6 +2031,114 @@ function initDeliveryFormValidation() {
     });
   }
   validate();
+}
+
+function updatePaymentStepData(deliveryStep, paymentStep) {
+  var form = deliveryStep.closest("form");
+  if (!form) return;
+  
+  var citySelect = qs("#City", deliveryStep);
+  var addrSelect = qs("#Address", deliveryStep);
+  var deptSelect = qs("#Department", deliveryStep);
+  var deliveryTypeRadios = qsa('input[name="Delivery-Type"]', deliveryStep);
+  var buildingInput = qs("#Building", deliveryStep);
+  var flatInput = qs("#Flat", deliveryStep);
+  
+  var cityValue = "";
+  if (citySelect && citySelect.value) {
+    var cityDisplay = qs('[data-np-display="City"]', deliveryStep);
+    if (cityDisplay && cityDisplay.value) {
+      cityValue = cityDisplay.value.trim();
+    } else {
+      var cityOption = citySelect.querySelector('option[value="' + citySelect.value + '"]');
+      if (cityOption) {
+        cityValue = cityOption.textContent.trim();
+      }
+    }
+  }
+  
+  var addressValue = "";
+  if (addrSelect && addrSelect.value) {
+    var addrDisplay = qs('[data-np-display="Address"]', deliveryStep);
+    if (addrDisplay && addrDisplay.value) {
+      addressValue = addrDisplay.value.trim();
+    } else {
+      var addrOption = addrSelect.querySelector('option[value="' + addrSelect.value + '"]');
+      if (addrOption) {
+        addressValue = addrOption.textContent.trim();
+      }
+    }
+    if (buildingInput && buildingInput.value.trim()) {
+      addressValue += ", " + buildingInput.value.trim();
+    }
+    if (flatInput && flatInput.value.trim()) {
+      addressValue += ", кв. " + flatInput.value.trim();
+    }
+  }
+  
+  var departmentValue = "";
+  if (deptSelect && deptSelect.value) {
+    var deptDisplay = qs('[data-np-display="Department"]', deliveryStep);
+    if (deptDisplay && deptDisplay.value) {
+      departmentValue = deptDisplay.value.trim();
+    } else {
+      var deptOption = deptSelect.querySelector('option[value="' + deptSelect.value + '"]');
+      if (deptOption) {
+        departmentValue = deptOption.textContent.trim();
+      }
+    }
+  }
+  
+  var deliveryTypeValue = "";
+  var checkedDeliveryType = Array.prototype.find.call(deliveryTypeRadios, function(r) { return r.checked; });
+  if (checkedDeliveryType) {
+    if (checkedDeliveryType.value === "courier") {
+      deliveryTypeValue = "Кур'єр на вашу адресу";
+    } else if (checkedDeliveryType.value === "pickup") {
+      deliveryTypeValue = "Самовивіз з Нової Пошти або Поштомату";
+    }
+  }
+  
+  var paymentRows = qsa(".modal-esim_table-row", paymentStep);
+  paymentRows.forEach(function(row) {
+    var label = qs(".modal-esim_table-label", row);
+    if (!label) return;
+    
+    var labelText = label.textContent.trim();
+    var items = qsa(".modal-esim_table-item", row);
+    if (items.length < 2) return;
+    
+    var valueCell = items[1];
+    var valueDiv = qs("div", valueCell);
+    
+    if (labelText.indexOf("Місто") === 0 || labelText.indexOf("Город") === 0) {
+      if (valueDiv) valueDiv.textContent = cityValue || "";
+    } else if (labelText.indexOf("Доставка") === 0 || labelText.indexOf("Способ доставки") === 0) {
+      if (valueDiv) valueDiv.textContent = deliveryTypeValue || "";
+    } else if (labelText.indexOf("Адреса") === 0 || labelText.indexOf("Адрес") === 0) {
+      if (checkedDeliveryType && checkedDeliveryType.value === "pickup") {
+        row.style.display = "none";
+      } else {
+        row.style.display = "";
+        if (valueDiv) valueDiv.textContent = addressValue || "";
+      }
+    } else if (labelText.indexOf("Номер відділення") === 0 || labelText.indexOf("Отделение") === 0) {
+      if (checkedDeliveryType && checkedDeliveryType.value === "courier") {
+        row.style.display = "none";
+      } else {
+        row.style.display = "";
+        if (valueDiv) valueDiv.textContent = departmentValue || "";
+      }
+    } else if (labelText.indexOf("Загальна вартість") === 0 || labelText.indexOf("Общая стоимость") === 0) {
+      var priceDiv = qs(".modal-esim_price", valueCell) || valueDiv;
+      if (priceDiv) {
+        var priceText = priceDiv.textContent.trim();
+        if (priceText && !priceText.endsWith("₴") && !priceText.endsWith("грн")) {
+          priceDiv.textContent = priceText + " ₴";
+        }
+      }
+    }
+  });
 }
 
 function saveOrderData(formData) {
@@ -2095,6 +2336,22 @@ var SLIDERS = [
     },
   },
   {
+    key: "planModal",
+    container: '[data-swiper="planSliderModal"]',
+    pagination: '[data-slider="planPaginationModal"]',
+    options: {
+      pagination: { el: '[data-slider="planPaginationModal"]', clickable: true },
+      breakpoints: {
+        991: { slidesPerView: 1.8, spaceBetween: 24 },
+        768: { slidesPerView: 1.4, spaceBetween: 20 },
+        468: { slidesPerView: 1, spaceBetween: 16 },
+        0:   { slidesPerView: 1, spaceBetween: 12, initialSlide: 1 },
+      },
+    },
+    desktopOnly: true,
+    minSlides: 3,
+  },
+  {
     key: "about",
     container: '[data-swiper="aboutSlider"]',
     pagination: '[data-slider="aboutPagination"]',
@@ -2119,6 +2376,17 @@ function createIfNeeded(cfg) {
   var el = document.querySelector(cfg.container);
   if (!el) return;
 
+  if (cfg.desktopOnly && mql.matches) {
+    return;
+  }
+
+  if (cfg.minSlides) {
+    var slides = el.querySelectorAll(".swiper-slide");
+    if (!slides || slides.length < cfg.minSlides) {
+      return;
+    }
+  }
+
   if (cfg.pagination && !document.querySelector(cfg.pagination)) {
     console.warn("[Swiper] Pagination element not found for " + cfg.key + ".");
   }
@@ -2134,8 +2402,24 @@ function destroyIfExists(cfg) {
   instances.delete(cfg.key);
 }
 
-function enableMobile() { SLIDERS.forEach(createIfNeeded); }
-function disableDesktop() { SLIDERS.forEach(destroyIfExists); }
+function enableMobile() { 
+  SLIDERS.forEach(function(cfg) {
+    if (!cfg.desktopOnly) {
+      createIfNeeded(cfg);
+    } else {
+      destroyIfExists(cfg);
+    }
+  });
+}
+function disableDesktop() { 
+  SLIDERS.forEach(function(cfg) {
+    if (!cfg.desktopOnly) {
+      destroyIfExists(cfg);
+    } else {
+      createIfNeeded(cfg);
+    }
+  });
+}
 function applyByViewport() { if (mql.matches) enableMobile(); else disableDesktop(); }
 
 if (document.readyState === "loading") {
