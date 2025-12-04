@@ -1,5 +1,5 @@
 (function () {
-console.log("[UTM] Script loaded and executing...");
+  console.log("[UTM] Script loaded and executing...");
 var API_BASE = "https://api-staging.utm.net.ua";
 
 function qs(sel, root) {
@@ -56,202 +56,202 @@ function normalizeUaPhoneDigits(v) {
   if (digits.length < 3) digits = "380";
   return digits;
 }
-
-function isValidUaPhoneDigits(digits) {
-// допустимые украинские мобильные коды операторов:
-// 39, 50, 63, 66, 67, 68, 73, 89, 91–99
-return /^380(39|50|63|66|67|68|73|89|9[1-9])\d{7}$/.test(digits);
-}
+  
+  function isValidUaPhoneDigits(digits) {
+  // допустимые украинские мобильные коды операторов:
+  // 39, 50, 63, 66, 67, 68, 73, 89, 91–99
+  return /^380(39|50|63|66|67|68|73|89|9[1-9])\d{7}$/.test(digits);
+  }
 
 function formatUaPhoneVisual(digits) {
   digits = normalizeUaPhoneDigits(digits);
   var rest = digits.slice(3);
   var filled = rest.slice(0, 9);
-var prefix = "+380";
-var parts = [];
-if (filled.length > 0) {
-  parts.push("(");
-  parts.push(filled.slice(0, 2));
-  if (filled.length < 2) {
-    parts.push("X".repeat(2 - filled.length));
-  }
-  parts.push(") ");
-  if (filled.length > 2) {
-    parts.push(filled.slice(2, 5));
-    if (filled.length < 5) {
-      parts.push("X".repeat(5 - filled.length));
+  var prefix = "+380";
+  var parts = [];
+  if (filled.length > 0) {
+    parts.push("(");
+    parts.push(filled.slice(0, 2));
+    if (filled.length < 2) {
+      parts.push("X".repeat(2 - filled.length));
     }
-    parts.push("-");
-    if (filled.length > 5) {
-      parts.push(filled.slice(5, 7));
-      if (filled.length < 7) {
-        parts.push("X".repeat(7 - filled.length));
+    parts.push(") ");
+    if (filled.length > 2) {
+      parts.push(filled.slice(2, 5));
+      if (filled.length < 5) {
+        parts.push("X".repeat(5 - filled.length));
       }
       parts.push("-");
-      if (filled.length > 7) {
-        parts.push(filled.slice(7, 9));
-        if (filled.length < 9) {
-          parts.push("X".repeat(9 - filled.length));
+      if (filled.length > 5) {
+        parts.push(filled.slice(5, 7));
+        if (filled.length < 7) {
+          parts.push("X".repeat(7 - filled.length));
+        }
+        parts.push("-");
+        if (filled.length > 7) {
+          parts.push(filled.slice(7, 9));
+          if (filled.length < 9) {
+            parts.push("X".repeat(9 - filled.length));
+          }
+        } else {
+          parts.push("XX");
         }
       } else {
-        parts.push("XX");
+        parts.push("XX-XX");
       }
     } else {
-      parts.push("XX-XX");
+      parts.push("XXX-XX-XX");
     }
   } else {
-    parts.push("XXX-XX-XX");
+    parts.push("(XX) XXX-XX-XX");
   }
-} else {
-  parts.push("(XX) XXX-XX-XX");
-}
   return {
-  prefix: prefix,
-  formatted: parts.join(""),
-  visual: prefix + parts.join(""),
+    prefix: prefix,
+    formatted: parts.join(""),
+    visual: prefix + parts.join(""),
     fullDigits: digits,
   };
 }
 
 function bindPhoneMask(input) {
   if (!input) return;
-
-var wrapper = input.parentElement;
-if (!wrapper) {
-  console.warn("[PhoneMask] Input parent not found");
-  return;
-}
-
-if (wrapper.querySelector(".phone-mask-overlay")) {
-  return;
-}
-
-var overlay = document.createElement("div");
-overlay.className = "phone-mask-overlay";
-var inputStyle = window.getComputedStyle(input);
-var inputBorderWidth = inputStyle.borderWidth || "0px";
-overlay.style.cssText = "position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; display: flex; align-items: center; padding-left: " + inputStyle.paddingLeft + "; padding-right: " + inputStyle.paddingRight + "; padding-top: " + inputStyle.paddingTop + "; padding-bottom: " + inputStyle.paddingBottom + "; font-size: " + inputStyle.fontSize + "; font-family: " + inputStyle.fontFamily + "; line-height: " + inputStyle.lineHeight + "; white-space: nowrap; overflow: hidden; box-sizing: border-box;";
-wrapper.style.position = "relative";
-input.style.boxSizing = "border-box";
-var originalBorder = inputStyle.border || "none";
-var originalBorderWidth = inputStyle.borderWidth || "0px";
-if (originalBorderWidth === "0px" || !originalBorderWidth) {
-  input.style.border = "1px solid transparent";
-}
-
-var prefixSpan = document.createElement("span");
-prefixSpan.style.cssText = "color: #000; margin-right: .25rem;";
-var formattedSpan = document.createElement("span");
-formattedSpan.style.cssText = "color: #999;";
-var cursorSpan = document.createElement("span");
-cursorSpan.className = "phone-cursor";
-cursorSpan.style.cssText = "display: inline-block; width: 1px; height: 1em; background-color: #000; margin-left: 1px; vertical-align: baseline; animation: blink 1s infinite;";
-overlay.appendChild(prefixSpan);
-overlay.appendChild(formattedSpan);
-overlay.appendChild(cursorSpan);
-
-var style = document.createElement("style");
-style.textContent = "@keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }";
-document.head.appendChild(style);
-
-var currentValue = input.value || "";
-var digits = normalizeUaPhoneDigits(currentValue);
-var restDigits = digits.slice(3);
-
-input.dataset.phoneDigits = digits;
-input.value = restDigits;
-input.style.color = "transparent";
-input.style.caretColor = "transparent";
-input.style.backgroundColor = "transparent";
-var computedStyle = window.getComputedStyle(input);
-var borderWidth = computedStyle.borderWidth || "1px";
-var borderStyle = computedStyle.borderStyle || "solid";
-var borderColor = computedStyle.borderColor || "transparent";
-input.style.borderWidth = borderWidth;
-input.style.borderStyle = borderStyle;
-input.style.borderColor = borderColor;
-input.style.outline = "none";
-input.setAttribute("placeholder", "");
-input.setAttribute("maxlength", "9");
-input.setAttribute("inputmode", "tel");
-input.setAttribute("autocomplete", "off");
-input.setAttribute("autocorrect", "off");
-input.setAttribute("autocapitalize", "off");
-input.setAttribute("spellcheck", "false");
-
-function getCursorPositionInFormatted(inputPos, digits) {
-  if (inputPos === 0) {
-    return 0;
+  
+  var wrapper = input.parentElement;
+  if (!wrapper) {
+    console.warn("[PhoneMask] Input parent not found");
+    return;
   }
-  var pos = 0;
-  if (inputPos > 0) {
-    pos += 1;
-    pos += Math.min(inputPos, 2);
-    if (inputPos >= 2) {
-      pos += 3;
-      if (inputPos > 2) {
-        pos += Math.min(inputPos - 2, 3);
-        if (inputPos >= 5) {
-          pos += 1;
-          if (inputPos > 5) {
-            pos += Math.min(inputPos - 5, 2);
-            if (inputPos >= 7) {
-              pos += 1;
-              if (inputPos > 7) {
-                pos += Math.min(inputPos - 7, 2);
+  
+  if (wrapper.querySelector(".phone-mask-overlay")) {
+    return;
+  }
+  
+  var overlay = document.createElement("div");
+  overlay.className = "phone-mask-overlay";
+  var inputStyle = window.getComputedStyle(input);
+  var inputBorderWidth = inputStyle.borderWidth || "0px";
+  overlay.style.cssText = "position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; display: flex; align-items: center; padding-left: " + inputStyle.paddingLeft + "; padding-right: " + inputStyle.paddingRight + "; padding-top: " + inputStyle.paddingTop + "; padding-bottom: " + inputStyle.paddingBottom + "; font-size: " + inputStyle.fontSize + "; font-family: " + inputStyle.fontFamily + "; line-height: " + inputStyle.lineHeight + "; white-space: nowrap; overflow: hidden; box-sizing: border-box;";
+  wrapper.style.position = "relative";
+  input.style.boxSizing = "border-box";
+  var originalBorder = inputStyle.border || "none";
+  var originalBorderWidth = inputStyle.borderWidth || "0px";
+  if (originalBorderWidth === "0px" || !originalBorderWidth) {
+    input.style.border = "1px solid transparent";
+  }
+  
+  var prefixSpan = document.createElement("span");
+  prefixSpan.style.cssText = "color: #000; margin-right: .25rem;";
+  var formattedSpan = document.createElement("span");
+  formattedSpan.style.cssText = "color: #999;";
+  var cursorSpan = document.createElement("span");
+  cursorSpan.className = "phone-cursor";
+  cursorSpan.style.cssText = "display: inline-block; width: 1px; height: 1em; background-color: #000; margin-left: 1px; vertical-align: baseline; animation: blink 1s infinite;";
+  overlay.appendChild(prefixSpan);
+  overlay.appendChild(formattedSpan);
+  overlay.appendChild(cursorSpan);
+  
+  var style = document.createElement("style");
+  style.textContent = "@keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }";
+  document.head.appendChild(style);
+  
+  var currentValue = input.value || "";
+  var digits = normalizeUaPhoneDigits(currentValue);
+  var restDigits = digits.slice(3);
+  
+  input.dataset.phoneDigits = digits;
+  input.value = restDigits;
+  input.style.color = "transparent";
+  input.style.caretColor = "transparent";
+  input.style.backgroundColor = "transparent";
+  var computedStyle = window.getComputedStyle(input);
+  var borderWidth = computedStyle.borderWidth || "1px";
+  var borderStyle = computedStyle.borderStyle || "solid";
+  var borderColor = computedStyle.borderColor || "transparent";
+  input.style.borderWidth = borderWidth;
+  input.style.borderStyle = borderStyle;
+  input.style.borderColor = borderColor;
+  input.style.outline = "none";
+  input.setAttribute("placeholder", "");
+  input.setAttribute("maxlength", "9");
+  input.setAttribute("inputmode", "tel");
+  input.setAttribute("autocomplete", "off");
+  input.setAttribute("autocorrect", "off");
+  input.setAttribute("autocapitalize", "off");
+  input.setAttribute("spellcheck", "false");
+  
+  function getCursorPositionInFormatted(inputPos, digits) {
+    if (inputPos === 0) {
+      return 0;
+    }
+    var pos = 0;
+    if (inputPos > 0) {
+      pos += 1;
+      pos += Math.min(inputPos, 2);
+      if (inputPos >= 2) {
+        pos += 3;
+        if (inputPos > 2) {
+          pos += Math.min(inputPos - 2, 3);
+          if (inputPos >= 5) {
+            pos += 1;
+            if (inputPos > 5) {
+              pos += Math.min(inputPos - 5, 2);
+              if (inputPos >= 7) {
+                pos += 1;
+                if (inputPos > 7) {
+                  pos += Math.min(inputPos - 7, 2);
+                }
               }
             }
           }
         }
       }
     }
-  }
-  return pos;
-}
-
-function updateOverlay() {
-  var digits = input.value || "";
-  var fullDigits = "380" + digits;
-  input.dataset.phoneDigits = fullDigits;
-  
-  var fmt = formatUaPhoneVisual(fullDigits);
-  prefixSpan.textContent = fmt.prefix;
-  
-  var cursorPosInFormatted = 0;
-  var isFocused = input === document.activeElement;
-  if (isFocused) {
-    var inputCursorPos = input.selectionStart !== undefined ? input.selectionStart : digits.length;
-    cursorPosInFormatted = getCursorPositionInFormatted(inputCursorPos, digits);
-    cursorSpan.style.display = "inline-block";
-  } else {
-    cursorSpan.style.display = "none";
+    return pos;
   }
   
-  var formattedText = fmt.formatted;
-  var beforeCursor = formattedText.slice(0, cursorPosInFormatted);
-  var afterCursor = formattedText.slice(cursorPosInFormatted);
-  
-  formattedSpan.innerHTML = "";
-  
-  if (beforeCursor) {
-    var beforeSpan = document.createElement("span");
-    beforeSpan.textContent = beforeCursor;
-    beforeSpan.style.color = digits.length > 0 ? "#000" : "#999";
-    formattedSpan.appendChild(beforeSpan);
-  }
-  
-  if (isFocused) {
-    formattedSpan.appendChild(cursorSpan);
-  }
-  
-  if (afterCursor) {
-    var afterSpan = document.createElement("span");
-    afterSpan.textContent = afterCursor;
-    afterSpan.style.color = digits.length > 0 ? "#000" : "#999";
-    formattedSpan.appendChild(afterSpan);
-  }
-  
-  if (isValidUaPhoneDigits(fullDigits)) {
+  function updateOverlay() {
+    var digits = input.value || "";
+    var fullDigits = "380" + digits;
+    input.dataset.phoneDigits = fullDigits;
+    
+    var fmt = formatUaPhoneVisual(fullDigits);
+    prefixSpan.textContent = fmt.prefix;
+    
+    var cursorPosInFormatted = 0;
+    var isFocused = input === document.activeElement;
+    if (isFocused) {
+      var inputCursorPos = input.selectionStart !== undefined ? input.selectionStart : digits.length;
+      cursorPosInFormatted = getCursorPositionInFormatted(inputCursorPos, digits);
+      cursorSpan.style.display = "inline-block";
+    } else {
+      cursorSpan.style.display = "none";
+    }
+    
+    var formattedText = fmt.formatted;
+    var beforeCursor = formattedText.slice(0, cursorPosInFormatted);
+    var afterCursor = formattedText.slice(cursorPosInFormatted);
+    
+    formattedSpan.innerHTML = "";
+    
+    if (beforeCursor) {
+      var beforeSpan = document.createElement("span");
+      beforeSpan.textContent = beforeCursor;
+      beforeSpan.style.color = digits.length > 0 ? "#000" : "#999";
+      formattedSpan.appendChild(beforeSpan);
+    }
+    
+    if (isFocused) {
+      formattedSpan.appendChild(cursorSpan);
+    }
+    
+    if (afterCursor) {
+      var afterSpan = document.createElement("span");
+      afterSpan.textContent = afterCursor;
+      afterSpan.style.color = digits.length > 0 ? "#000" : "#999";
+      formattedSpan.appendChild(afterSpan);
+    }
+    
+    if (isValidUaPhoneDigits(fullDigits)) {
       input.classList.add("is-validated");
       input.classList.remove("error");
     } else {
@@ -259,109 +259,109 @@ function updateOverlay() {
     }
   }
 
-wrapper.appendChild(overlay);
-updateOverlay();
-
-input.addEventListener("input", function(e) {
-  var value = input.value.replace(/\D/g, "");
-  if (value.length > 9) {
-    value = value.slice(0, 9);
-  }
-  var oldLength = input.value.length;
-  input.value = value;
+  wrapper.appendChild(overlay);
   updateOverlay();
   
-  setTimeout(function() {
-    var cursorPos = value.length;
-    if (input.setSelectionRange) {
-      input.setSelectionRange(cursorPos, cursorPos);
+  input.addEventListener("input", function(e) {
+    var value = input.value.replace(/\D/g, "");
+    if (value.length > 9) {
+      value = value.slice(0, 9);
     }
+    var oldLength = input.value.length;
+    input.value = value;
     updateOverlay();
-  }, 0);
-});
-
-input.addEventListener("keydown", function(e) {
-  var key = e.key;
-  var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
-  var value = input.value || "";
-  
-  if (key === "ArrowLeft" || key === "ArrowRight" || key === "Home" || key === "End") {
+    
     setTimeout(function() {
-      var newPos = input.selectionStart !== undefined ? input.selectionStart : 0;
-      if (newPos < 0) newPos = 0;
-      if (newPos > value.length) newPos = value.length;
+      var cursorPos = value.length;
       if (input.setSelectionRange) {
-        input.setSelectionRange(newPos, newPos);
+        input.setSelectionRange(cursorPos, cursorPos);
       }
       updateOverlay();
     }, 0);
-  }
-});
-
-input.addEventListener("keyup", function() {
-  setTimeout(function() {
-    var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
-    var value = input.value || "";
-    if (cursorPos < 0) cursorPos = 0;
-    if (cursorPos > value.length) cursorPos = value.length;
-    if (input.setSelectionRange) {
-      input.setSelectionRange(cursorPos, cursorPos);
-    }
-    updateOverlay();
-  }, 0);
-});
-
-input.addEventListener("click", function() {
-  setTimeout(function() {
-    var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
-    var value = input.value || "";
-    if (cursorPos < 0) cursorPos = 0;
-    if (cursorPos > value.length) cursorPos = value.length;
-    if (input.setSelectionRange) {
-      input.setSelectionRange(cursorPos, cursorPos);
-    }
-    updateOverlay();
-  }, 0);
-});
-
-input.addEventListener("select", function() {
-  setTimeout(function() {
-    var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
-    var value = input.value || "";
-    if (cursorPos < 0) cursorPos = 0;
-    if (cursorPos > value.length) cursorPos = value.length;
-    if (input.setSelectionRange) {
-      input.setSelectionRange(cursorPos, cursorPos);
-    }
-    updateOverlay();
-  }, 0);
-});
-
-input.addEventListener("focus", function() {
-  updateOverlay();
-  setTimeout(function() {
-    var cursorPos = (input.value || "").length;
-    if (input.setSelectionRange) {
-      input.setSelectionRange(cursorPos, cursorPos);
-    }
-    updateOverlay();
-  }, 0);
-});
-
-input.addEventListener("blur", function() {
-  cursorSpan.style.display = "none";
-  updateOverlay();
-});
-
-  input.addEventListener("paste", function(e) {
-    e.preventDefault();
-    var pasted = (e.clipboardData || window.clipboardData).getData("text");
-    var digits = pasted.replace(/\D/g, "").slice(0, 9);
-    input.value = digits;
-    updateOverlay();
-    var event = new Event("input", { bubbles: true });
-    input.dispatchEvent(event);
   });
+  
+  input.addEventListener("keydown", function(e) {
+    var key = e.key;
+    var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+    var value = input.value || "";
+    
+    if (key === "ArrowLeft" || key === "ArrowRight" || key === "Home" || key === "End") {
+      setTimeout(function() {
+        var newPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+        if (newPos < 0) newPos = 0;
+        if (newPos > value.length) newPos = value.length;
+        if (input.setSelectionRange) {
+          input.setSelectionRange(newPos, newPos);
+        }
+        updateOverlay();
+      }, 0);
+    }
+  });
+  
+  input.addEventListener("keyup", function() {
+    setTimeout(function() {
+      var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+      var value = input.value || "";
+      if (cursorPos < 0) cursorPos = 0;
+      if (cursorPos > value.length) cursorPos = value.length;
+      if (input.setSelectionRange) {
+        input.setSelectionRange(cursorPos, cursorPos);
+      }
+      updateOverlay();
+    }, 0);
+  });
+  
+  input.addEventListener("click", function() {
+    setTimeout(function() {
+      var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+      var value = input.value || "";
+      if (cursorPos < 0) cursorPos = 0;
+      if (cursorPos > value.length) cursorPos = value.length;
+      if (input.setSelectionRange) {
+        input.setSelectionRange(cursorPos, cursorPos);
+      }
+      updateOverlay();
+    }, 0);
+  });
+  
+  input.addEventListener("select", function() {
+    setTimeout(function() {
+      var cursorPos = input.selectionStart !== undefined ? input.selectionStart : 0;
+      var value = input.value || "";
+      if (cursorPos < 0) cursorPos = 0;
+      if (cursorPos > value.length) cursorPos = value.length;
+      if (input.setSelectionRange) {
+        input.setSelectionRange(cursorPos, cursorPos);
+      }
+      updateOverlay();
+    }, 0);
+  });
+  
+  input.addEventListener("focus", function() {
+    updateOverlay();
+    setTimeout(function() {
+      var cursorPos = (input.value || "").length;
+      if (input.setSelectionRange) {
+        input.setSelectionRange(cursorPos, cursorPos);
+      }
+      updateOverlay();
+    }, 0);
+  });
+  
+  input.addEventListener("blur", function() {
+    cursorSpan.style.display = "none";
+    updateOverlay();
+  });
+  
+    input.addEventListener("paste", function(e) {
+      e.preventDefault();
+      var pasted = (e.clipboardData || window.clipboardData).getData("text");
+      var digits = pasted.replace(/\D/g, "").slice(0, 9);
+      input.value = digits;
+      updateOverlay();
+      var event = new Event("input", { bubbles: true });
+      input.dispatchEvent(event);
+    });
 }
 
 function getPhoneDigits(input) {
@@ -373,7 +373,7 @@ function getPhoneDigits(input) {
 }
 
 function isFullUaPhone(input) {
-return isValidUaPhoneDigits(getPhoneDigits(input));
+  return isValidUaPhoneDigits(getPhoneDigits(input));
 }
 
 function initModalSystem() {
@@ -414,17 +414,17 @@ function initModalSystem() {
   }
 
   function openModalByDialogId(dialogId) {
-  console.log("[UTM] openModalByDialogId called with:", dialogId);
+    console.log("[UTM] openModalByDialogId called with:", dialogId);
     var dlg = document.getElementById(dialogId);
-  if (!dlg) {
-    console.warn("[UTM] Dialog not found:", dialogId);
-    return;
-  }
+    if (!dlg) {
+      console.warn("[UTM] Dialog not found:", dialogId);
+      return;
+    }
     var wrapper = dlg.closest(".modal");
-  if (!wrapper) {
-    console.warn("[UTM] Modal wrapper not found for dialog:", dialogId);
-    return;
-  }
+    if (!wrapper) {
+      console.warn("[UTM] Modal wrapper not found for dialog:", dialogId);
+      return;
+    }
 
     qsa(".modal.is-open").forEach(function (m) {
       closeModal(m);
@@ -435,24 +435,65 @@ function initModalSystem() {
     dlg.classList.add("is-open");
     document.body.classList.add("modal-open");
     resetSteps(dlg);
-  
-  // Инициализируем NovaPoshta селекты при открытии модального окна с доставкой
-  console.log("[UTM] Checking if modal is plastic delivery. dialogId:", dialogId, "dlg.id:", dlg.id);
-  if (dialogId === "modal-plastic" || dlg.id === "modal-plastic") {
-    console.log("[NovaPoshta] Modal plastic opened via openModalByDialogId, initializing NovaPoshta selects");
-    setTimeout(function() {
-      initNovaPostSelects();
-    }, 100);
-  } else {
-    // Проверяем, есть ли внутри этого диалога селект City
-    var citySelect = dlg.querySelector("#City");
-    if (citySelect) {
-      console.log("[NovaPoshta] Found City select in opened modal, initializing NovaPoshta selects");
+    
+    // Инициализируем NovaPoshta селекты при открытии модального окна с доставкой
+    console.log("[UTM] Checking if modal is plastic delivery. dialogId:", dialogId, "dlg.id:", dlg.id);
+    if (dialogId === "modal-plastic" || dlg.id === "modal-plastic") {
+      console.log("[NovaPoshta] Modal plastic opened via openModalByDialogId, initializing NovaPoshta selects");
       setTimeout(function() {
         initNovaPostSelects();
       }, 100);
+    } else {
+      // Проверяем, есть ли внутри этого диалога селект City
+      var citySelect = dlg.querySelector("#City");
+      if (citySelect) {
+        console.log("[NovaPoshta] Found City select in opened modal, initializing NovaPoshta selects");
+        setTimeout(function() {
+          initNovaPostSelects();
+        }, 100);
+      }
     }
-  }
+    
+    // Инициализируем слайдер planSliderModal при открытии модалки modal-plan
+    if (dialogId === "modal-plan" || dlg.id === "modal-plan") {
+      setTimeout(function() {
+        if (typeof window.initPlanModalSlider === "function") {
+          window.initPlanModalSlider();
+        }
+      }, 200);
+    }
+    
+    // Обновляем таблицу результатов при открытии modal-order
+    if (dialogId === "modal-order" || dlg.id === "modal-order") {
+      setTimeout(function() {
+        var orderState = window.utmOrderState || {};
+        if (orderState.planName || orderState.planPrice) {
+          var tableNames = qsa(".modal-esim_name", dlg);
+          var tablePlans = qsa(".modal-esim_plan", dlg);
+          var tablePrices = qsa(".modal-esim_price", dlg);
+          
+          if (orderState.planName) {
+            tableNames.forEach(function (n) {
+              n.textContent = orderState.planName;
+            });
+            tablePlans.forEach(function (n) {
+              n.textContent = orderState.planName;
+            });
+          }
+          
+          if (orderState.planPrice) {
+            tablePrices.forEach(function (n) {
+              var priceText = orderState.planPrice || "";
+              if (priceText && !priceText.endsWith("₴") && !priceText.endsWith("грн")) {
+                n.textContent = priceText + " ₴";
+              } else {
+                n.textContent = priceText;
+              }
+            });
+          }
+        }
+      }, 100);
+    }
   }
 
   openButtons.forEach(function (btn) {
@@ -488,114 +529,197 @@ function initModalSystem() {
 }
 
 var modalApi = initModalSystem();
-
-function initPlanSelection() {
-  var orderState = (window.utmOrderState = window.utmOrderState || {});
-  var buttons = qsa('[data-modal-open="modal-order"]');
-  buttons.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var card =
-        btn.closest(".pricing_slider-slide, .pricing_content") ||
-        btn.closest(".pricing_content");
-      if (!card) return;
-      var nameEl = qs(".pricing_plan-name", card);
-      var priceEl = qs(".pricing_plan-price", card);
-      orderState.planName = nameEl ? nameEl.textContent.trim() : "";
-      orderState.planPrice = priceEl ? priceEl.textContent.trim() : "";
+  window.modalApi = modalApi;
+  
+  function initNewClientButton() {
+    var newClientBtn = document.getElementById("new-client");
+    if (!newClientBtn) return;
+    
+    newClientBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      
+      var activeDialog = document.querySelector(".modal__dialog.is-open");
+      var planDialog = document.getElementById("modal-plan");
+      
+      if (!planDialog) {
+        console.warn("[NewClient] modal-plan not found");
+        return;
+      }
+      
+      if (activeDialog) {
+        activeDialog.classList.remove("is-open");
+      }
+      
+      planDialog.classList.add("is-open");
+      
+      var modalWrapper = planDialog.closest(".modal");
+      if (modalWrapper) {
+        modalWrapper.classList.add("is-open");
+        modalWrapper.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
+        
+        if (window.modalApi && typeof window.modalApi.resetSteps === "function") {
+          window.modalApi.resetSteps(planDialog);
+        }
+      }
     });
-  });
-  
-  function handlePlanButtonClick(e) {
-    var btn = e.target.closest('a.button, button.button, .button');
-    if (!btn) return;
-    
-    var btnText = btn.textContent.trim();
-    if (btnText.indexOf("Обрати тариф") < 0 && btnText.indexOf("Обрати") < 0) {
-      return;
-    }
-    
-    e.preventDefault();
-    e.stopPropagation();
-    console.log("[PlanSelection] Button clicked:", btnText);
-    
-    var planModal = document.getElementById("modal-plan");
-    if (!planModal) {
-      console.warn("[PlanSelection] modal-plan not found");
-      return;
-    }
-    
-    var card = btn.closest(".pricing_content") || btn.closest(".plan_item--bshadow") || btn.closest(".w-dyn-item");
-    if (!card) {
-      console.warn("[PlanSelection] Card not found");
-      return;
-    }
-    
-    console.log("[PlanSelection] Card found");
-    var nameEl = qs(".pricing_plan-name", card);
-    var priceEl = qs(".pricing_plan-price", card);
-    
-    if (nameEl) {
-      orderState.planName = nameEl.textContent.trim();
-      console.log("[PlanSelection] Plan name:", orderState.planName);
-    }
-    if (priceEl) {
-      var priceText = priceEl.textContent.trim();
-      orderState.planPrice = priceText;
-      console.log("[PlanSelection] Plan price:", orderState.planPrice);
-    }
-    
-    var planForm = planModal.querySelector("form");
-    if (planForm) {
-      var planInput = planForm.querySelector('input[name="plan"]');
-      var priceInput = planForm.querySelector('input[name="price"]');
-      if (planInput && orderState.planName) {
-        planInput.value = orderState.planName;
-      }
-      if (priceInput && orderState.planPrice) {
-        priceInput.value = orderState.planPrice;
-      }
-    }
-    
-    var planWrapper = planModal.closest(".modal");
-    if (!planWrapper) {
-      console.warn("[PlanSelection] Modal wrapper not found");
-      return;
-    }
-    
-    var orderDialog = document.getElementById("modal-order");
-    if (!orderDialog) {
-      console.warn("[PlanSelection] modal-order not found");
-      return;
-    }
-    
-    console.log("[PlanSelection] Hiding modal-plan and showing modal-order");
-    planModal.classList.remove("is-open");
-    orderDialog.classList.add("is-open");
-    
-    var stepSelectType = qs(".modal-step-esim.is--select-type-sim", orderDialog);
-    if (stepSelectType) {
-      var allSteps = qsa(".modal-step-esim, .modal-success, .modal-error-esim", orderDialog);
-      allSteps.forEach(function(step) {
-        step.style.display = "none";
-        step.classList.remove("is-active");
-      });
-      stepSelectType.style.display = "";
-      stepSelectType.classList.add("is-active");
-      console.log("[PlanSelection] Switched to select-type-sim step");
-    } else {
-      console.warn("[PlanSelection] select-type-sim step not found");
-    }
   }
-  
-  document.addEventListener("click", function(e) {
-    var planModal = document.getElementById("modal-plan");
-    if (planModal && planModal.classList.contains("is-open")) {
-      var btn = e.target.closest('a.button, button.button, .button');
-      if (btn && planModal.contains(btn)) {
+
+  function initPlanSelection() {
+  var orderState = (window.utmOrderState = window.utmOrderState || {});
+    
+    function handlePlanButtonClick(e) {
+      var btn = e.target.closest('a.button, button.button, .button, [data-choose-plan]');
+      if (!btn) return;
+      
+      var btnText = btn.textContent.trim();
+      if (btnText.indexOf("Обрати тариф") < 0 && btnText.indexOf("Обрати") < 0 && !btn.hasAttribute("data-choose-plan")) {
+        return;
+      }
+      
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      console.log("[PlanSelection] Button clicked:", btnText);
+      
+      var card = btn.closest(".pricing_slider-slide") || btn.closest(".plan_item--bshadow") || btn.closest(".pricing_content") || btn.closest(".w-dyn-item");
+      if (!card) {
+        console.warn("[PlanSelection] Card not found");
+        return;
+      }
+      
+      console.log("[PlanSelection] Card found");
+      
+      var planName = "";
+      var planPrice = "";
+      
+      if (card.hasAttribute("data-plan-name")) {
+        planName = card.getAttribute("data-plan-name") || "";
+        console.log("[PlanSelection] Plan name from data attribute:", planName);
+      }
+      if (card.hasAttribute("data-plan-price")) {
+        planPrice = card.getAttribute("data-plan-price") || "";
+        console.log("[PlanSelection] Plan price from data attribute:", planPrice);
+      }
+      
+      if (!planName) {
+        var nameEl = qs(".pricing_plan-name", card);
+        if (nameEl) {
+          planName = nameEl.textContent.trim();
+          console.log("[PlanSelection] Plan name from element:", planName);
+        }
+      }
+      if (!planPrice) {
+        var priceEl = qs(".pricing_plan-price", card);
+        if (priceEl) {
+          planPrice = priceEl.textContent.trim();
+          console.log("[PlanSelection] Plan price from element:", planPrice);
+        }
+      }
+      
+      if (planName) {
+        orderState.planName = planName;
+        console.log("[PlanSelection] Plan name saved:", orderState.planName);
+      }
+      if (planPrice) {
+        orderState.planPrice = planPrice;
+        console.log("[PlanSelection] Plan price saved:", orderState.planPrice);
+      }
+      
+      var planModal = document.getElementById("modal-plan");
+      if (planModal) {
+        var planForm = planModal.querySelector("form");
+        if (planForm) {
+          var planInput = planForm.querySelector('input[name="plan"]');
+          var priceInput = planForm.querySelector('input[name="price"]');
+          if (planInput && orderState.planName) {
+            planInput.value = orderState.planName;
+          }
+          if (priceInput && orderState.planPrice) {
+            priceInput.value = orderState.planPrice;
+          }
+        }
+      }
+      
+      var orderDialog = document.getElementById("modal-order");
+      if (!orderDialog) {
+        console.warn("[PlanSelection] modal-order not found");
+        return;
+      }
+      
+      var orderForm = orderDialog.querySelector("form");
+      if (orderForm) {
+        var planInput = orderForm.querySelector('input[name="plan"]');
+        var priceInput = orderForm.querySelector('input[name="price"]');
+        if (planInput && orderState.planName) {
+          planInput.value = orderState.planName;
+        }
+        if (priceInput && orderState.planPrice) {
+          priceInput.value = orderState.planPrice;
+        }
+      }
+      
+      if (planModal) {
+        var planWrapper = planModal.closest(".modal");
+        if (planWrapper) {
+          console.log("[PlanSelection] Hiding modal-plan and showing modal-order");
+          planModal.classList.remove("is-open");
+        }
+      }
+      
+      if (window.modalApi && typeof window.modalApi.openModalByDialogId === "function") {
+        window.modalApi.openModalByDialogId("modal-order");
+      } else {
+        var orderWrapper = orderDialog.closest(".modal");
+        if (orderWrapper) {
+          qsa(".modal.is-open").forEach(function(m) {
+            m.classList.remove("is-open");
+            m.setAttribute("aria-hidden", "true");
+          });
+          orderWrapper.classList.add("is-open");
+          orderWrapper.setAttribute("aria-hidden", "false");
+          orderDialog.classList.add("is-open");
+          document.body.classList.add("modal-open");
+        }
+      }
+      
+      setTimeout(function() {
+        if (typeof window.initPlanModalSlider === "function") {
+          window.initPlanModalSlider();
+        }
+      }, 100);
+      
+      var stepSelectType = qs(".modal-step-esim.is--select-type-sim", orderDialog);
+      if (stepSelectType) {
+        var allSteps = qsa(".modal-step-esim, .modal-success, .modal-error-esim", orderDialog);
+        allSteps.forEach(function(step) {
+          step.style.display = "none";
+          step.classList.remove("is-active");
+        });
+        stepSelectType.style.display = "";
+        stepSelectType.classList.add("is-active");
+        console.log("[PlanSelection] Switched to select-type-sim step");
+      } else {
+        console.warn("[PlanSelection] select-type-sim step not found");
+      }
+    }
+    
+    document.addEventListener("click", function(e) {
+      var btn = e.target.closest('a.button, button.button, .button, [data-choose-plan]');
+      if (!btn) return;
+      
+      var btnText = btn.textContent.trim();
+      var isPlanButton = btnText.indexOf("Обрати тариф") >= 0 || btnText.indexOf("Обрати") >= 0 || btn.hasAttribute("data-choose-plan");
+      
+      if (!isPlanButton) return;
+      
+      var hasDataModalOpen = btn.hasAttribute("data-modal-open") && btn.getAttribute("data-modal-open") === "modal-order";
+      if (hasDataModalOpen || btn.hasAttribute("data-choose-plan")) {
         handlePlanButtonClick(e);
       }
-    }
-  });
+    }, true);
 }
 
 function initTopUpModal() {
@@ -752,7 +876,6 @@ function initEsimOrderModal() {
   var tablePlans = qsa(".modal-esim_plan");
   var tablePrices = qsa(".modal-esim_price");
 
-  // ячейка "Тип SIM" в таблице шага оплаты (динамический текст)
   var simTypeCell = null;
   if (stepPayment) {
     var paymentRows = qsa(".modal-esim_table-row", stepPayment);
@@ -778,7 +901,7 @@ function initEsimOrderModal() {
   function getSimType() {
     var val = getSimTypeRaw();
     if (!val) return null;
-
+  
     var low = String(val).toLowerCase();
     if (low === "esim" || low === "e-sim" || low === "e_sim") return "eSIM";
     return "plastic";
@@ -834,8 +957,26 @@ function initEsimOrderModal() {
       var fullName =
         firstNameInput.value.trim() + " " + lastNameInput.value.trim();
       var email = emailInput.value.trim();
+      
       var planName = orderState.planName || "";
       var planPrice = orderState.planPrice || "";
+      
+      if (!planName || !planPrice) {
+        var form = dialog.querySelector("form");
+        if (form) {
+          var planInput = form.querySelector('input[name="plan"]');
+          var priceInput = form.querySelector('input[name="price"]');
+          if (planInput && planInput.value) {
+            planName = planInput.value;
+          }
+          if (priceInput && priceInput.value) {
+            planPrice = priceInput.value;
+          }
+        }
+      }
+      
+      if (!planName) planName = "";
+      if (!planPrice) planPrice = "";
 
       tableNames.forEach(function (n) {
         n.textContent = fullName;
@@ -847,7 +988,12 @@ function initEsimOrderModal() {
         n.textContent = planName;
       });
       tablePrices.forEach(function (n) {
-        n.textContent = planPrice;
+          var priceText = planPrice || "";
+          if (priceText && !priceText.endsWith("₴") && !priceText.endsWith("грн")) {
+            n.textContent = priceText + " ₴";
+          } else {
+            n.textContent = priceText;
+          }
       });
 
       var type = getSimType(); // "eSIM" или "plastic"
@@ -873,25 +1019,25 @@ function initEsimOrderModal() {
         }
       } else {
         // Пластиковая SIM перекидывается в модалку доставки
-      console.log("[UTM] Switching to plastic delivery modal");
+        console.log("[UTM] Switching to plastic delivery modal");
         var wrapper = dialog.closest(".modal");
         if (wrapper) {
           var plasticDialog = qs(".modal__dialog.modal--md", wrapper);
           if (plasticDialog) {
-          console.log("[UTM] Found plastic dialog, switching to it");
+            console.log("[UTM] Found plastic dialog, switching to it");
             dialog.classList.remove("is-open");
             plasticDialog.classList.add("is-open");
             modalApi.resetSteps(plasticDialog);
-          // Инициализируем NovaPoshta селекты при открытии модального окна доставки
-          console.log("[NovaPoshta] Plastic delivery modal opened, initializing NovaPoshta selects");
-          setTimeout(function() {
-            initNovaPostSelects();
-          }, 100);
+            // Инициализируем NovaPoshta селекты при открытии модального окна доставки
+            console.log("[NovaPoshta] Plastic delivery modal opened, initializing NovaPoshta selects");
+            setTimeout(function() {
+              initNovaPostSelects();
+            }, 100);
+          } else {
+            console.warn("[UTM] Plastic dialog not found!");
+          }
         } else {
-          console.warn("[UTM] Plastic dialog not found!");
-        }
-      } else {
-        console.warn("[UTM] Modal wrapper not found!");
+          console.warn("[UTM] Modal wrapper not found!");
         }
       }
     });
@@ -985,120 +1131,120 @@ function npFetchJson(url) {
     return res.json();
   });
 }
-
-async function npLoadInitialCities(limit) {
-var params = new URLSearchParams();
-params.set("page", "1");
-params.set("limit", String(limit));
-var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
-console.log("[NovaPoshta] npLoadInitialCities: fetching initial", limit, "cities");
-try {
-  var data = await npFetchJson(url);
-  return data.payload || [];
-} catch (e) {
-  console.error("[NovaPoshta] npLoadInitialCities: error:", e);
-  return [];
-}
-}
-
-async function npSearchCities(query) {
-var params = new URLSearchParams();
-params.set("page", "1");
-params.set("limit", "50");
-params.set("searchQuery", query);
-var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
-console.log("[NovaPoshta] npSearchCities: searching for", query);
-try {
-  var data = await npFetchJson(url);
-  return data.payload || [];
-} catch (e) {
-  console.error("[NovaPoshta] npSearchCities: error:", e);
-  return [];
-}
-}
-
-async function npLoadInitialStreets(cityId, limit) {
-if (!cityId) return [];
-var params = new URLSearchParams();
-params.set("page", "1");
-params.set("limit", String(limit));
-params.set("cityId", cityId);
-var url = API_BASE + "/delivery/novaPost/streets?" + params.toString();
-console.log("[NovaPoshta] npLoadInitialStreets: fetching initial", limit, "streets for city", cityId);
-try {
-  var data = await npFetchJson(url);
-  return data.payload || [];
-} catch (e) {
-  console.error("[NovaPoshta] npLoadInitialStreets: error:", e);
-  return [];
-}
-}
-
-async function npSearchStreets(query, cityId) {
-if (!cityId) return Promise.resolve([]);
-var params = new URLSearchParams();
-params.set("page", "1");
-params.set("limit", "50");
-params.set("searchQuery", query);
-params.set("cityId", cityId);
-var url = API_BASE + "/delivery/novaPost/streets?" + params.toString();
-console.log("[NovaPoshta] npSearchStreets: searching for", query, "in city", cityId);
-try {
-  var data = await npFetchJson(url);
-  return data.payload || [];
-} catch (e) {
-  console.error("[NovaPoshta] npSearchStreets: error:", e);
-  return [];
-}
-}
-
-async function npLoadInitialBranches(cityId, limit) {
-if (!cityId) return [];
-var params = new URLSearchParams();
-params.set("page", "1");
-params.set("limit", String(limit));
-params.set("cityId", cityId);
-var url = API_BASE + "/delivery/novaPost/branches?" + params.toString();
-console.log("[NovaPoshta] npLoadInitialBranches: fetching initial", limit, "branches for city", cityId);
-try {
-  var data = await npFetchJson(url);
-  return data.payload || [];
-} catch (e) {
-  console.error("[NovaPoshta] npLoadInitialBranches: error:", e);
-  return [];
-}
-}
-
-async function npSearchBranches(query, cityId) {
-if (!cityId) return Promise.resolve([]);
-var params = new URLSearchParams();
-params.set("page", "1");
-params.set("limit", "50");
-params.set("searchQuery", query);
-params.set("cityId", cityId);
-var url = API_BASE + "/delivery/novaPost/branches?" + params.toString();
-console.log("[NovaPoshta] npSearchBranches: searching for", query, "in city", cityId);
-try {
-  var data = await npFetchJson(url);
-  return data.payload || [];
-} catch (e) {
-  console.error("[NovaPoshta] npSearchBranches: error:", e);
-  return [];
-}
-}
+  
+  async function npLoadInitialCities(limit) {
+  var params = new URLSearchParams();
+  params.set("page", "1");
+  params.set("limit", String(limit));
+  var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
+  console.log("[NovaPoshta] npLoadInitialCities: fetching initial", limit, "cities");
+  try {
+    var data = await npFetchJson(url);
+    return data.payload || [];
+  } catch (e) {
+    console.error("[NovaPoshta] npLoadInitialCities: error:", e);
+    return [];
+  }
+  }
+  
+  async function npSearchCities(query) {
+  var params = new URLSearchParams();
+  params.set("page", "1");
+  params.set("limit", "50");
+  params.set("searchQuery", query);
+  var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
+  console.log("[NovaPoshta] npSearchCities: searching for", query);
+  try {
+    var data = await npFetchJson(url);
+    return data.payload || [];
+  } catch (e) {
+    console.error("[NovaPoshta] npSearchCities: error:", e);
+    return [];
+  }
+  }
+  
+  async function npLoadInitialStreets(cityId, limit) {
+  if (!cityId) return [];
+  var params = new URLSearchParams();
+  params.set("page", "1");
+  params.set("limit", String(limit));
+  params.set("cityId", cityId);
+  var url = API_BASE + "/delivery/novaPost/streets?" + params.toString();
+  console.log("[NovaPoshta] npLoadInitialStreets: fetching initial", limit, "streets for city", cityId);
+  try {
+    var data = await npFetchJson(url);
+    return data.payload || [];
+  } catch (e) {
+    console.error("[NovaPoshta] npLoadInitialStreets: error:", e);
+    return [];
+  }
+  }
+  
+  async function npSearchStreets(query, cityId) {
+  if (!cityId) return Promise.resolve([]);
+  var params = new URLSearchParams();
+  params.set("page", "1");
+  params.set("limit", "50");
+  params.set("searchQuery", query);
+  params.set("cityId", cityId);
+  var url = API_BASE + "/delivery/novaPost/streets?" + params.toString();
+  console.log("[NovaPoshta] npSearchStreets: searching for", query, "in city", cityId);
+  try {
+    var data = await npFetchJson(url);
+    return data.payload || [];
+  } catch (e) {
+    console.error("[NovaPoshta] npSearchStreets: error:", e);
+    return [];
+  }
+  }
+  
+  async function npLoadInitialBranches(cityId, limit) {
+  if (!cityId) return [];
+  var params = new URLSearchParams();
+  params.set("page", "1");
+  params.set("limit", String(limit));
+  params.set("cityId", cityId);
+  var url = API_BASE + "/delivery/novaPost/branches?" + params.toString();
+  console.log("[NovaPoshta] npLoadInitialBranches: fetching initial", limit, "branches for city", cityId);
+  try {
+    var data = await npFetchJson(url);
+    return data.payload || [];
+  } catch (e) {
+    console.error("[NovaPoshta] npLoadInitialBranches: error:", e);
+    return [];
+  }
+  }
+  
+  async function npSearchBranches(query, cityId) {
+  if (!cityId) return Promise.resolve([]);
+  var params = new URLSearchParams();
+  params.set("page", "1");
+  params.set("limit", "50");
+  params.set("searchQuery", query);
+  params.set("cityId", cityId);
+  var url = API_BASE + "/delivery/novaPost/branches?" + params.toString();
+  console.log("[NovaPoshta] npSearchBranches: searching for", query, "in city", cityId);
+  try {
+    var data = await npFetchJson(url);
+    return data.payload || [];
+  } catch (e) {
+    console.error("[NovaPoshta] npSearchBranches: error:", e);
+    return [];
+  }
+  }
 
 async function npLoadAllCities() {
-console.log("[NovaPoshta] npLoadAllCities: starting...");
+  console.log("[NovaPoshta] npLoadAllCities: starting...");
   var select = document.getElementById("City");
-if (!select) {
-  console.warn("[NovaPoshta] npLoadAllCities: City select not found!");
-  return;
-}
-if (select.dataset.loading === "1") {
-  console.log("[NovaPoshta] npLoadAllCities: already loading, skipping");
-  return;
-}
-console.log("[NovaPoshta] npLoadAllCities: City select found, starting load");
+  if (!select) {
+    console.warn("[NovaPoshta] npLoadAllCities: City select not found!");
+    return;
+  }
+  if (select.dataset.loading === "1") {
+    console.log("[NovaPoshta] npLoadAllCities: already loading, skipping");
+    return;
+  }
+  console.log("[NovaPoshta] npLoadAllCities: City select found, starting load");
   var phOpt = select.querySelector("option[value='']") || select.options[0];
   var phText = phOpt ? phOpt.textContent : "Введіть назву міста";
   select.innerHTML = "";
@@ -1106,130 +1252,130 @@ console.log("[NovaPoshta] npLoadAllCities: City select found, starting load");
   ph.value = "";
   ph.textContent = phText;
   select.appendChild(ph);
-select.dataset.loading = "1";
+  select.dataset.loading = "1";
   var page = 1;
-var limit = 500;
-var totalLoaded = 0;
-var hasMore = true;
-
-while (hasMore) {
+  var limit = 500;
+  var totalLoaded = 0;
+  var hasMore = true;
+  
+  while (hasMore) {
     var params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
-  var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
-  console.log("[NovaPoshta] npLoadAllCities: fetching page", page, "from", url);
+    var url = API_BASE + "/delivery/novaPost/cities?" + params.toString();
+    console.log("[NovaPoshta] npLoadAllCities: fetching page", page, "from", url);
     var data;
     try {
-    data = await npFetchJson(url);
-    console.log("[NovaPoshta] npLoadAllCities: received response for page", page, ":", data);
+      data = await npFetchJson(url);
+      console.log("[NovaPoshta] npLoadAllCities: received response for page", page, ":", data);
     } catch (e) {
-    console.error("[NovaPoshta] npLoadAllCities: error on page", page, ":", e);
+      console.error("[NovaPoshta] npLoadAllCities: error on page", page, ":", e);
       break;
     }
-  
-  // Обработка разных форматов ответа API
-  var items = null;
-  if (Array.isArray(data)) {
-    items = data;
-    console.log("[NovaPoshta] npLoadAllCities: data is array, items count:", items.length);
-  } else if (data && Array.isArray(data.payload)) {
-    items = data.payload;
-    console.log("[NovaPoshta] npLoadAllCities: data.payload found, items count:", items.length, "meta:", data.meta);
-  } else if (data && Array.isArray(data.data)) {
-    items = data.data;
-    console.log("[NovaPoshta] npLoadAllCities: data.data found, items count:", items.length);
-  } else if (data && data.items && Array.isArray(data.items)) {
-    items = data.items;
-    console.log("[NovaPoshta] npLoadAllCities: data.items found, items count:", items.length);
-  } else {
-    console.warn("[NovaPoshta] npLoadAllCities: unknown data format:", data);
-  }
-  
-  if (!items || !items.length) {
-    console.log("[NovaPoshta] npLoadAllCities: no items found, stopping");
-    hasMore = false;
-    break;
-  }
-  
-  var seenValues = {};
-  var seenTexts = {};
-  items.forEach(function (item) {
-    var value = item.id || item.Ref || item.ref;
-    var text = item.name || item.Description || item.description;
-    if (!value || !text) return;
-    var textKey = String(text).trim().toLowerCase();
-    if (seenValues[value] || seenTexts[textKey]) return;
-    seenValues[value] = true;
-    seenTexts[textKey] = true;
+    
+    // Обработка разных форматов ответа API
+    var items = null;
+    if (Array.isArray(data)) {
+      items = data;
+      console.log("[NovaPoshta] npLoadAllCities: data is array, items count:", items.length);
+    } else if (data && Array.isArray(data.payload)) {
+      items = data.payload;
+      console.log("[NovaPoshta] npLoadAllCities: data.payload found, items count:", items.length, "meta:", data.meta);
+    } else if (data && Array.isArray(data.data)) {
+      items = data.data;
+      console.log("[NovaPoshta] npLoadAllCities: data.data found, items count:", items.length);
+    } else if (data && data.items && Array.isArray(data.items)) {
+      items = data.items;
+      console.log("[NovaPoshta] npLoadAllCities: data.items found, items count:", items.length);
+    } else {
+      console.warn("[NovaPoshta] npLoadAllCities: unknown data format:", data);
+    }
+    
+    if (!items || !items.length) {
+      console.log("[NovaPoshta] npLoadAllCities: no items found, stopping");
+      hasMore = false;
+      break;
+    }
+    
+    var seenValues = {};
+    var seenTexts = {};
+    items.forEach(function (item) {
+      var value = item.id || item.Ref || item.ref;
+      var text = item.name || item.Description || item.description;
+      if (!value || !text) return;
+      var textKey = String(text).trim().toLowerCase();
+      if (seenValues[value] || seenTexts[textKey]) return;
+      seenValues[value] = true;
+      seenTexts[textKey] = true;
       var opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = text;
+      opt.value = value;
+      opt.textContent = text;
       select.appendChild(opt);
     });
-  
-  totalLoaded += items.length;
-  console.log("[NovaPoshta] npLoadAllCities: loaded page", page, "-", items.length, "items (total:", totalLoaded, ")");
-  
-  // Проверка наличия следующей страницы
-  var totalPages = null;
-  var currentPage = null;
-  var totalCount = null;
-  
-  if (data.meta) {
-    totalPages = data.meta.totalPages;
-    currentPage = data.meta.currentPage || data.meta.page;
-    totalCount = data.meta.totalCount || data.meta.total;
-    console.log("[NovaPoshta] npLoadAllCities: meta found - totalPages:", totalPages, "currentPage:", currentPage, "totalCount:", totalCount);
-  } else if (data.pagination) {
-    totalPages = data.pagination.totalPages;
-    currentPage = data.pagination.currentPage || data.pagination.page;
-    totalCount = data.pagination.totalCount || data.pagination.total;
-    console.log("[NovaPoshta] npLoadAllCities: pagination found - totalPages:", totalPages, "currentPage:", currentPage, "totalCount:", totalCount);
-  } else {
-    console.log("[NovaPoshta] npLoadAllCities: no meta/pagination found, using fallback logic");
-  }
-  
-  if (totalPages !== null && typeof totalPages === "number") {
-    if (page >= totalPages) {
-      console.log("[NovaPoshta] npLoadAllCities: reached totalPages (", totalPages, "), stopping");
-      hasMore = false;
+    
+    totalLoaded += items.length;
+    console.log("[NovaPoshta] npLoadAllCities: loaded page", page, "-", items.length, "items (total:", totalLoaded, ")");
+    
+    // Проверка наличия следующей страницы
+    var totalPages = null;
+    var currentPage = null;
+    var totalCount = null;
+    
+    if (data.meta) {
+      totalPages = data.meta.totalPages;
+      currentPage = data.meta.currentPage || data.meta.page;
+      totalCount = data.meta.totalCount || data.meta.total;
+      console.log("[NovaPoshta] npLoadAllCities: meta found - totalPages:", totalPages, "currentPage:", currentPage, "totalCount:", totalCount);
+    } else if (data.pagination) {
+      totalPages = data.pagination.totalPages;
+      currentPage = data.pagination.currentPage || data.pagination.page;
+      totalCount = data.pagination.totalCount || data.pagination.total;
+      console.log("[NovaPoshta] npLoadAllCities: pagination found - totalPages:", totalPages, "currentPage:", currentPage, "totalCount:", totalCount);
     } else {
+      console.log("[NovaPoshta] npLoadAllCities: no meta/pagination found, using fallback logic");
+    }
+    
+    if (totalPages !== null && typeof totalPages === "number") {
+      if (page >= totalPages) {
+        console.log("[NovaPoshta] npLoadAllCities: reached totalPages (", totalPages, "), stopping");
+        hasMore = false;
+      } else {
     page++;
   }
-  } else if (totalCount !== null && typeof totalCount === "number") {
-    if (totalLoaded >= totalCount) {
-      console.log("[NovaPoshta] npLoadAllCities: reached totalCount (", totalCount, "), stopping");
-      hasMore = false;
-    } else {
-      page++;
-    }
-  } else {
-    // Fallback: если получили меньше элементов, чем лимит, значит это последняя страница
-    if (items.length < limit) {
-      console.log("[NovaPoshta] npLoadAllCities: items.length (", items.length, ") < limit (", limit, "), stopping");
-      hasMore = false;
-    } else {
-      // Если получили ровно limit элементов, делаем еще один запрос для проверки
-      console.log("[NovaPoshta] npLoadAllCities: items.length (", items.length, ") == limit (", limit, "), continuing to next page");
-      page++;
-      // Защита от бесконечного цикла
-      if (page > 1000) {
-        console.warn("[NovaPoshta] npLoadAllCities: reached max pages limit (1000)");
+    } else if (totalCount !== null && typeof totalCount === "number") {
+      if (totalLoaded >= totalCount) {
+        console.log("[NovaPoshta] npLoadAllCities: reached totalCount (", totalCount, "), stopping");
         hasMore = false;
+      } else {
+        page++;
+      }
+    } else {
+      // Fallback: если получили меньше элементов, чем лимит, значит это последняя страница
+      if (items.length < limit) {
+        console.log("[NovaPoshta] npLoadAllCities: items.length (", items.length, ") < limit (", limit, "), stopping");
+        hasMore = false;
+      } else {
+        // Если получили ровно limit элементов, делаем еще один запрос для проверки
+        console.log("[NovaPoshta] npLoadAllCities: items.length (", items.length, ") == limit (", limit, "), continuing to next page");
+        page++;
+        // Защита от бесконечного цикла
+        if (page > 1000) {
+          console.warn("[NovaPoshta] npLoadAllCities: reached max pages limit (1000)");
+          hasMore = false;
+        }
       }
     }
   }
-}
-
-console.log("[NovaPoshta] npLoadAllCities: finished loading, total cities:", totalLoaded);
-delete select.dataset.loading;
+  
+  console.log("[NovaPoshta] npLoadAllCities: finished loading, total cities:", totalLoaded);
+  delete select.dataset.loading;
 }
 
 async function npLoadAllStreets() {
   if (!npState.cityId) return;
   var select = document.getElementById("Address");
   if (!select) return;
-if (select.dataset.loading === "1") return;
+  if (select.dataset.loading === "1") return;
   var phOpt = select.querySelector("option[value='']") || select.options[0];
   var phText = phOpt ? phOpt.textContent : "Введіть адресу";
   select.innerHTML = "";
@@ -1237,13 +1383,13 @@ if (select.dataset.loading === "1") return;
   ph.value = "";
   ph.textContent = phText;
   select.appendChild(ph);
-select.dataset.loading = "1";
+  select.dataset.loading = "1";
   var page = 1;
-var limit = 500;
-var totalLoaded = 0;
-var hasMore = true;
-
-while (hasMore) {
+  var limit = 500;
+  var totalLoaded = 0;
+  var hasMore = true;
+  
+  while (hasMore) {
     var params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
@@ -1254,86 +1400,86 @@ while (hasMore) {
         API_BASE + "/delivery/novaPost/streets?" + params.toString()
       );
     } catch (e) {
-    console.error("NovaPoshta streets error:", e);
+      console.error("NovaPoshta streets error:", e);
       break;
     }
-  
-  var items = null;
-  if (Array.isArray(data)) {
-    items = data;
-  } else if (data && Array.isArray(data.payload)) {
-    items = data.payload;
-  } else if (data && Array.isArray(data.data)) {
-    items = data.data;
-  } else if (data && data.items && Array.isArray(data.items)) {
-    items = data.items;
-  }
-  
-  if (!items || !items.length) {
-    hasMore = false;
-    break;
-  }
-  
-  var seenValues = {};
-  var seenTexts = {};
-  items.forEach(function (item) {
-    var value = item.id || item.Ref || item.ref;
-    var text = item.name || item.Description || item.description;
-    if (!value || !text) return;
-    var textKey = String(text).trim().toLowerCase();
-    if (seenValues[value] || seenTexts[textKey]) return;
-    seenValues[value] = true;
-    seenTexts[textKey] = true;
+    
+    var items = null;
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data && Array.isArray(data.payload)) {
+      items = data.payload;
+    } else if (data && Array.isArray(data.data)) {
+      items = data.data;
+    } else if (data && data.items && Array.isArray(data.items)) {
+      items = data.items;
+    }
+    
+    if (!items || !items.length) {
+      hasMore = false;
+      break;
+    }
+    
+    var seenValues = {};
+    var seenTexts = {};
+    items.forEach(function (item) {
+      var value = item.id || item.Ref || item.ref;
+      var text = item.name || item.Description || item.description;
+      if (!value || !text) return;
+      var textKey = String(text).trim().toLowerCase();
+      if (seenValues[value] || seenTexts[textKey]) return;
+      seenValues[value] = true;
+      seenTexts[textKey] = true;
       var opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = text;
+      opt.value = value;
+      opt.textContent = text;
       select.appendChild(opt);
     });
-  
-  totalLoaded += items.length;
-  
-  var totalPages = null;
-  var totalCount = null;
-  if (data.meta) {
-    totalPages = data.meta.totalPages;
-    totalCount = data.meta.totalCount || data.meta.total;
-  } else if (data.pagination) {
-    totalPages = data.pagination.totalPages;
-    totalCount = data.pagination.totalCount || data.pagination.total;
-  }
-  
-  if (totalPages !== null && typeof totalPages === "number") {
-    if (page >= totalPages) {
-      hasMore = false;
-    } else {
+    
+    totalLoaded += items.length;
+    
+    var totalPages = null;
+    var totalCount = null;
+    if (data.meta) {
+      totalPages = data.meta.totalPages;
+      totalCount = data.meta.totalCount || data.meta.total;
+    } else if (data.pagination) {
+      totalPages = data.pagination.totalPages;
+      totalCount = data.pagination.totalCount || data.pagination.total;
+    }
+    
+    if (totalPages !== null && typeof totalPages === "number") {
+      if (page >= totalPages) {
+        hasMore = false;
+      } else {
     page++;
   }
-  } else if (totalCount !== null && typeof totalCount === "number") {
-    if (totalLoaded >= totalCount) {
-      hasMore = false;
-    } else {
-      page++;
-    }
-  } else {
-    if (items.length < limit) {
-      hasMore = false;
-    } else {
-      page++;
-      if (page > 1000) {
+    } else if (totalCount !== null && typeof totalCount === "number") {
+      if (totalLoaded >= totalCount) {
         hasMore = false;
+      } else {
+        page++;
+      }
+    } else {
+      if (items.length < limit) {
+        hasMore = false;
+      } else {
+        page++;
+        if (page > 1000) {
+          hasMore = false;
+        }
       }
     }
   }
-}
-
-delete select.dataset.loading;
+  
+  delete select.dataset.loading;
 }
 
 async function npLoadAllBranches() {
   if (!npState.cityId) return;
   var select = document.getElementById("Department");
   if (!select) return;
-if (select.dataset.loading === "1") return;
+  if (select.dataset.loading === "1") return;
   var phOpt = select.querySelector("option[value='']") || select.options[0];
   var phText = phOpt
     ? phOpt.textContent
@@ -1343,13 +1489,13 @@ if (select.dataset.loading === "1") return;
   ph.value = "";
   ph.textContent = phText;
   select.appendChild(ph);
-select.dataset.loading = "1";
+  select.dataset.loading = "1";
   var page = 1;
-var limit = 500;
-var totalLoaded = 0;
-var hasMore = true;
-
-while (hasMore) {
+  var limit = 500;
+  var totalLoaded = 0;
+  var hasMore = true;
+  
+  while (hasMore) {
     var params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
@@ -1360,215 +1506,155 @@ while (hasMore) {
         API_BASE + "/delivery/novaPost/branches?" + params.toString()
       );
     } catch (e) {
-    console.error("NovaPoshta branches error:", e);
+      console.error("NovaPoshta branches error:", e);
       break;
     }
-  
-  var items = null;
-  if (Array.isArray(data)) {
-    items = data;
-  } else if (data && Array.isArray(data.payload)) {
-    items = data.payload;
-  } else if (data && Array.isArray(data.data)) {
-    items = data.data;
-  } else if (data && data.items && Array.isArray(data.items)) {
-    items = data.items;
-  }
-  
-  if (!items || !items.length) {
-    hasMore = false;
-    break;
-  }
-  
-  var seenValues = {};
-  var seenTexts = {};
-  items.forEach(function (item) {
-    var value = item.id || item.Ref || item.ref;
-    var text = item.name || item.Description || item.description;
-    if (!value || !text) return;
-    var textKey = String(text).trim().toLowerCase();
-    if (seenValues[value] || seenTexts[textKey]) return;
-    seenValues[value] = true;
-    seenTexts[textKey] = true;
+    
+    var items = null;
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data && Array.isArray(data.payload)) {
+      items = data.payload;
+    } else if (data && Array.isArray(data.data)) {
+      items = data.data;
+    } else if (data && data.items && Array.isArray(data.items)) {
+      items = data.items;
+    }
+    
+    if (!items || !items.length) {
+      hasMore = false;
+      break;
+    }
+    
+    var seenValues = {};
+    var seenTexts = {};
+    items.forEach(function (item) {
+      var value = item.id || item.Ref || item.ref;
+      var text = item.name || item.Description || item.description;
+      if (!value || !text) return;
+      var textKey = String(text).trim().toLowerCase();
+      if (seenValues[value] || seenTexts[textKey]) return;
+      seenValues[value] = true;
+      seenTexts[textKey] = true;
       var opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = text;
+      opt.value = value;
+      opt.textContent = text;
       select.appendChild(opt);
     });
-  
-  totalLoaded += items.length;
-  
-  var totalPages = null;
-  var totalCount = null;
-  if (data.meta) {
-    totalPages = data.meta.totalPages;
-    totalCount = data.meta.totalCount || data.meta.total;
-  } else if (data.pagination) {
-    totalPages = data.pagination.totalPages;
-    totalCount = data.pagination.totalCount || data.pagination.total;
-  }
-  
-  if (totalPages !== null && typeof totalPages === "number") {
-    if (page >= totalPages) {
-      hasMore = false;
-    } else {
+    
+    totalLoaded += items.length;
+    
+    var totalPages = null;
+    var totalCount = null;
+    if (data.meta) {
+      totalPages = data.meta.totalPages;
+      totalCount = data.meta.totalCount || data.meta.total;
+    } else if (data.pagination) {
+      totalPages = data.pagination.totalPages;
+      totalCount = data.pagination.totalCount || data.pagination.total;
+    }
+    
+    if (totalPages !== null && typeof totalPages === "number") {
+      if (page >= totalPages) {
+        hasMore = false;
+      } else {
     page++;
   }
-  } else if (totalCount !== null && typeof totalCount === "number") {
-    if (totalLoaded >= totalCount) {
-      hasMore = false;
-    } else {
-      page++;
-    }
-  } else {
-    if (items.length < limit) {
-      hasMore = false;
-    } else {
-      page++;
-      if (page > 1000) {
+    } else if (totalCount !== null && typeof totalCount === "number") {
+      if (totalLoaded >= totalCount) {
         hasMore = false;
+      } else {
+        page++;
       }
-    }
-  }
-}
-
-delete select.dataset.loading;
-}
-
-function initNovaPostAutocomplete(select, searchFn, minChars, initialLoadFn) {
-if (!select) return;
-if (select.dataset.npAutocomplete === "1") {
-  console.log("[NovaPoshta] Autocomplete already initialized for", select.id);
-  return;
-}
-
-var wrapper = select.closest(".np-select-wrapper");
-if (!wrapper) {
-  console.warn("[NovaPoshta] np-select-wrapper not found for", select.id);
-  return;
-}
-
-var displayInput = wrapper.querySelector('.w-embed .np-select-display') || wrapper.querySelector('.np-select-display');
-var dropdown = wrapper.querySelector(".np-select-dropdown");
-var searchInput = wrapper.querySelector(".np-select-search");
-var resultsList = wrapper.querySelector(".np-select-results");
-
-if (!displayInput || !dropdown || !searchInput || !resultsList) {
-  console.warn("[NovaPoshta] Required elements not found for", select.id);
-  return;
-}
-
-select.dataset.npAutocomplete = "1";
-var isOpen = false;
-var requestCounter = 0;
-
-var savedPlaceholder = displayInput.getAttribute("placeholder") || displayInput.getAttribute("data-placeholder") || "";
-
-function updateDisplay() {
-  var selectedOption = select.options[select.selectedIndex];
-  if (selectedOption && selectedOption.value) {
-    displayInput.value = selectedOption.textContent;
-    displayInput.classList.remove("placeholder");
-  } else {
-    displayInput.value = "";
-    displayInput.classList.add("placeholder");
-  }
-}
-
-function addItemToSelect(item, addToDropdown) {
-  var value = item.id || item.Ref || item.ref;
-  var text = item.name || item.Description || item.description;
-  if (!value || !text) return null;
-
-  var existingOption = select.querySelector('option[value="' + value + '"]');
-  if (!existingOption) {
-    var opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = text;
-    select.appendChild(opt);
-  }
-
-  if (addToDropdown) {
-    var itemDiv = document.createElement("div");
-    itemDiv.className = "np-select-item";
-    itemDiv.textContent = text;
-    itemDiv.dataset.value = value;
-    itemDiv.dataset.text = text;
-
-    if (select.value === value) {
-      itemDiv.classList.add("selected");
-    }
-
-    itemDiv.addEventListener("mouseenter", function() {
-      itemDiv.style.backgroundColor = "#f5f5f5";
-    });
-    itemDiv.addEventListener("mouseleave", function() {
-      if (select.value !== value) {
-        itemDiv.style.backgroundColor = "";
-      }
-    });
-    itemDiv.addEventListener("click", function() {
-      select.value = value;
-      updateDisplay();
-      hideDropdown();
-      setTimeout(function() {
-        var changeEvent = new Event("change", { bubbles: true, cancelable: true });
-        select.dispatchEvent(changeEvent);
-        var inputEvent = new Event("input", { bubbles: true, cancelable: true });
-        select.dispatchEvent(inputEvent);
-        if (select.id === "City" || select.id === "Address" || select.id === "Department") {
-          var deliveryStep = select.closest(".modal-step-esim.is--delivery");
-          if (deliveryStep && typeof window.deliveryFormValidate === "function") {
-            setTimeout(function() {
-              window.deliveryFormValidate();
-            }, 50);
-          }
+    } else {
+      if (items.length < limit) {
+        hasMore = false;
+      } else {
+        page++;
+        if (page > 1000) {
+          hasMore = false;
         }
-      }, 10);
-    });
-
-    return itemDiv;
-  }
-  return null;
-}
-
-function showInitialItems() {
-  resultsList.innerHTML = "";
-  var options = select.querySelectorAll("option[value]:not([value=''])");
-  var shown = 0;
-  var maxShow = 15;
-  var seenTexts = {};
-
-  for (var i = 0; i < options.length && shown < maxShow; i++) {
-    var opt = options[i];
-    if (opt.value) {
-      var text = opt.textContent.trim();
-      var textKey = text.toLowerCase();
-      if (seenTexts[textKey]) {
-        continue;
       }
-      seenTexts[textKey] = true;
-      
+    }
+  }
+  
+  delete select.dataset.loading;
+  }
+  
+  function initNovaPostAutocomplete(select, searchFn, minChars, initialLoadFn) {
+  if (!select) return;
+  if (select.dataset.npAutocomplete === "1") {
+    console.log("[NovaPoshta] Autocomplete already initialized for", select.id);
+    return;
+  }
+  
+  var wrapper = select.closest(".np-select-wrapper");
+  if (!wrapper) {
+    console.warn("[NovaPoshta] np-select-wrapper not found for", select.id);
+    return;
+  }
+  
+  var displayInput = wrapper.querySelector('.w-embed .np-select-display') || wrapper.querySelector('.np-select-display');
+  var dropdown = wrapper.querySelector(".np-select-dropdown");
+  var searchInput = wrapper.querySelector(".np-select-search");
+  var resultsList = wrapper.querySelector(".np-select-results");
+  
+  if (!displayInput || !dropdown || !searchInput || !resultsList) {
+    console.warn("[NovaPoshta] Required elements not found for", select.id);
+    return;
+  }
+  
+  select.dataset.npAutocomplete = "1";
+  var isOpen = false;
+  var requestCounter = 0;
+  
+  var savedPlaceholder = displayInput.getAttribute("placeholder") || displayInput.getAttribute("data-placeholder") || "";
+  
+  function updateDisplay() {
+    var selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.value) {
+      displayInput.value = selectedOption.textContent;
+      displayInput.classList.remove("placeholder");
+    } else {
+      displayInput.value = "";
+      displayInput.classList.add("placeholder");
+    }
+  }
+  
+  function addItemToSelect(item, addToDropdown) {
+    var value = item.id || item.Ref || item.ref;
+    var text = item.name || item.Description || item.description;
+    if (!value || !text) return null;
+  
+    var existingOption = select.querySelector('option[value="' + value + '"]');
+    if (!existingOption) {
+      var opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = text;
+      select.appendChild(opt);
+    }
+  
+    if (addToDropdown) {
       var itemDiv = document.createElement("div");
       itemDiv.className = "np-select-item";
       itemDiv.textContent = text;
-      itemDiv.dataset.value = opt.value;
+      itemDiv.dataset.value = value;
       itemDiv.dataset.text = text;
-
-      if (select.value === opt.value) {
+  
+      if (select.value === value) {
         itemDiv.classList.add("selected");
       }
-
+  
       itemDiv.addEventListener("mouseenter", function() {
-        this.style.backgroundColor = "#f5f5f5";
+        itemDiv.style.backgroundColor = "#f5f5f5";
       });
       itemDiv.addEventListener("mouseleave", function() {
-        if (select.value !== this.dataset.value) {
-          this.style.backgroundColor = "";
+        if (select.value !== value) {
+          itemDiv.style.backgroundColor = "";
         }
       });
       itemDiv.addEventListener("click", function() {
-        select.value = this.dataset.value;
+        select.value = value;
         updateDisplay();
         hideDropdown();
         setTimeout(function() {
@@ -1586,263 +1672,323 @@ function showInitialItems() {
           }
         }, 10);
       });
-
-      resultsList.appendChild(itemDiv);
-      shown++;
+  
+      return itemDiv;
     }
+    return null;
   }
-  if (shown === 0) {
-    var noResults = document.createElement("div");
-    noResults.className = "np-select-no-results";
-    noResults.textContent = "Введіть для пошуку...";
-    resultsList.appendChild(noResults);
-  }
-}
-
-function showDropdown() {
-  if (isOpen) return;
-  isOpen = true;
-  wrapper.classList.add("active");
-  searchInput.focus();
-  searchInput.value = "";
-  showInitialItems();
-}
-
-function hideDropdown() {
-  if (!isOpen) return;
-  isOpen = false;
-  wrapper.classList.remove("active");
-  searchInput.value = "";
-}
-
-var searchDebounced = debounce(function(query) {
-  console.log("[NovaPoshta] searchDebounced called for", select.id, "with query:", query);
-  requestCounter++;
-  var currentRequestId = requestCounter;
-  select.dataset.currentRequestId = String(currentRequestId);
-
-  resultsList.innerHTML = '<div class="np-select-loading">Завантаження...</div>';
-
-  console.log("[NovaPoshta] Calling searchFn for", select.id, "query:", query);
-  searchFn(query).then(function(items) {
-    console.log("[NovaPoshta] Search results received for", select.id, "items count:", items ? items.length : 0);
-    if (!wrapper || !resultsList) {
-      console.warn("[NovaPoshta] Wrapper or resultsList not found for", select.id);
-      return;
-    }
-    if (String(select.dataset.currentRequestId) !== String(currentRequestId)) {
-      console.log("[NovaPoshta] Ignoring outdated search results for", select.id);
-      return;
-    }
-
-    if (!items || items.length === 0) {
-      console.log("[NovaPoshta] No items found for", select.id);
-      resultsList.innerHTML = '<div class="np-select-no-results">Нічого не знайдено</div>';
-      return;
-    }
-
-    console.log("[NovaPoshta] Processing", items.length, "items for", select.id);
-    var seenValues = {};
-    var seenTexts = {};
-    var itemsToAdd = [];
-    
-    items.forEach(function(item) {
-      var value = item.id || item.Ref || item.ref;
-      var text = item.name || item.Description || item.description;
-      if (!value || !text) return;
-      var textKey = String(text).trim().toLowerCase();
-      if (seenValues[value] || seenTexts[textKey]) {
-        console.log("[NovaPoshta] Skipping duplicate item:", text, "value:", value);
-        return;
-      }
-      seenValues[value] = true;
-      seenTexts[textKey] = true;
-      itemsToAdd.push(item);
-    });
-    
-    var existingTexts = {};
-    var existingItems = resultsList.querySelectorAll('.np-select-item');
-    existingItems.forEach(function(existingItem) {
-      var existingText = (existingItem.dataset.text || existingItem.textContent || "").trim().toLowerCase();
-      if (existingText) {
-        existingTexts[existingText] = true;
-      }
-    });
-    
+  
+  function showInitialItems() {
     resultsList.innerHTML = "";
-    var addedCount = 0;
-    var finalSeenTexts = {};
-    itemsToAdd.forEach(function(item) {
-      var text = item.name || item.Description || item.description;
-      if (!text) return;
-      var textKey = String(text).trim().toLowerCase();
-      if (finalSeenTexts[textKey]) {
-        console.log("[NovaPoshta] Skipping duplicate text in results:", text);
-        return;
-      }
-      finalSeenTexts[textKey] = true;
-      var itemDiv = addItemToSelect(item, true);
-      if (itemDiv) {
+    var options = select.querySelectorAll("option[value]:not([value=''])");
+    var shown = 0;
+    var maxShow = 15;
+    var seenTexts = {};
+  
+    for (var i = 0; i < options.length && shown < maxShow; i++) {
+      var opt = options[i];
+      if (opt.value) {
+        var text = opt.textContent.trim();
+        var textKey = text.toLowerCase();
+        if (seenTexts[textKey]) {
+          continue;
+        }
+        seenTexts[textKey] = true;
+        
+        var itemDiv = document.createElement("div");
+        itemDiv.className = "np-select-item";
+        itemDiv.textContent = text;
+        itemDiv.dataset.value = opt.value;
+        itemDiv.dataset.text = text;
+  
+        if (select.value === opt.value) {
+          itemDiv.classList.add("selected");
+        }
+  
+        itemDiv.addEventListener("mouseenter", function() {
+          this.style.backgroundColor = "#f5f5f5";
+        });
+        itemDiv.addEventListener("mouseleave", function() {
+          if (select.value !== this.dataset.value) {
+            this.style.backgroundColor = "";
+          }
+        });
+        itemDiv.addEventListener("click", function() {
+          select.value = this.dataset.value;
+          updateDisplay();
+          hideDropdown();
+          setTimeout(function() {
+            var changeEvent = new Event("change", { bubbles: true, cancelable: true });
+            select.dispatchEvent(changeEvent);
+            var inputEvent = new Event("input", { bubbles: true, cancelable: true });
+            select.dispatchEvent(inputEvent);
+            if (select.id === "City" || select.id === "Address" || select.id === "Department") {
+              var deliveryStep = select.closest(".modal-step-esim.is--delivery");
+              if (deliveryStep && typeof window.deliveryFormValidate === "function") {
+                setTimeout(function() {
+                  window.deliveryFormValidate();
+                }, 50);
+              }
+            }
+          }, 10);
+        });
+  
         resultsList.appendChild(itemDiv);
-        addedCount++;
+        shown++;
       }
-    });
-    console.log("[NovaPoshta] Added", addedCount, "items to dropdown for", select.id);
-  }).catch(function(err) {
-    console.error("[NovaPoshta] Search error for", select.id, ":", err);
-    if (!wrapper || !resultsList) return;
-    if (String(select.dataset.currentRequestId) !== String(currentRequestId)) return;
-    resultsList.innerHTML = '<div class="np-select-error">Помилка завантаження</div>';
-  });
-}, 300);
-
-displayInput.addEventListener("click", function(e) {
-  e.preventDefault();
-  if (isOpen) {
-    hideDropdown();
-  } else {
-    showDropdown();
+    }
+    if (shown === 0) {
+      var noResults = document.createElement("div");
+      noResults.className = "np-select-no-results";
+      noResults.textContent = "Введіть для пошуку...";
+      resultsList.appendChild(noResults);
+    }
   }
-});
-
-searchInput.addEventListener("input", function(e) {
-  var query = (e.target.value || "").trim();
-  console.log("[NovaPoshta] Search input changed for", select.id, "query:", query, "length:", query.length, "minChars:", minChars);
-  if (query.length >= minChars) {
-    console.log("[NovaPoshta] Triggering search for", select.id, "with query:", query);
-    searchDebounced(query);
-  } else {
-    console.log("[NovaPoshta] Query too short, showing initial items for", select.id);
+  
+  function showDropdown() {
+    if (isOpen) return;
+    isOpen = true;
+    wrapper.classList.add("active");
+    searchInput.focus();
+    searchInput.value = "";
     showInitialItems();
   }
-});
-
-document.addEventListener("keydown", function(e) {
-  if (e.key === "Escape" && isOpen) {
-    hideDropdown();
+  
+  function hideDropdown() {
+    if (!isOpen) return;
+    isOpen = false;
+    wrapper.classList.remove("active");
+    searchInput.value = "";
   }
-});
-
-document.addEventListener("click", function(e) {
-  if (isOpen && !wrapper.contains(e.target)) {
-    hideDropdown();
-  }
-});
-
-select.addEventListener("change", function() {
-  updateDisplay();
-});
-
-if (initialLoadFn && typeof initialLoadFn === "function") {
-  initialLoadFn(15).then(function(items) {
-    if (items && items.length > 0) {
-      var seen = {};
+  
+  var searchDebounced = debounce(function(query) {
+    console.log("[NovaPoshta] searchDebounced called for", select.id, "with query:", query);
+    requestCounter++;
+    var currentRequestId = requestCounter;
+    select.dataset.currentRequestId = String(currentRequestId);
+  
+    resultsList.innerHTML = '<div class="np-select-loading">Завантаження...</div>';
+  
+    console.log("[NovaPoshta] Calling searchFn for", select.id, "query:", query);
+    searchFn(query).then(function(items) {
+      console.log("[NovaPoshta] Search results received for", select.id, "items count:", items ? items.length : 0);
+      if (!wrapper || !resultsList) {
+        console.warn("[NovaPoshta] Wrapper or resultsList not found for", select.id);
+        return;
+      }
+      if (String(select.dataset.currentRequestId) !== String(currentRequestId)) {
+        console.log("[NovaPoshta] Ignoring outdated search results for", select.id);
+        return;
+      }
+  
+      if (!items || items.length === 0) {
+        console.log("[NovaPoshta] No items found for", select.id);
+        resultsList.innerHTML = '<div class="np-select-no-results">Нічого не знайдено</div>';
+        return;
+      }
+  
+      console.log("[NovaPoshta] Processing", items.length, "items for", select.id);
+      var seenValues = {};
+      var seenTexts = {};
+      var itemsToAdd = [];
+      
       items.forEach(function(item) {
         var value = item.id || item.Ref || item.ref;
-        if (value && !seen[value]) {
-          seen[value] = true;
-          addItemToSelect(item, false);
+        var text = item.name || item.Description || item.description;
+        if (!value || !text) return;
+        var textKey = String(text).trim().toLowerCase();
+        if (seenValues[value] || seenTexts[textKey]) {
+          console.log("[NovaPoshta] Skipping duplicate item:", text, "value:", value);
+          return;
+        }
+        seenValues[value] = true;
+        seenTexts[textKey] = true;
+        itemsToAdd.push(item);
+      });
+      
+      var existingTexts = {};
+      var existingItems = resultsList.querySelectorAll('.np-select-item');
+      existingItems.forEach(function(existingItem) {
+        var existingText = (existingItem.dataset.text || existingItem.textContent || "").trim().toLowerCase();
+        if (existingText) {
+          existingTexts[existingText] = true;
         }
       });
-      console.log("[NovaPoshta] Loaded", items.length, "initial items for", select.id);
-      updateDisplay();
+      
+      resultsList.innerHTML = "";
+      var addedCount = 0;
+      var finalSeenTexts = {};
+      itemsToAdd.forEach(function(item) {
+        var text = item.name || item.Description || item.description;
+        if (!text) return;
+        var textKey = String(text).trim().toLowerCase();
+        if (finalSeenTexts[textKey]) {
+          console.log("[NovaPoshta] Skipping duplicate text in results:", text);
+          return;
+        }
+        finalSeenTexts[textKey] = true;
+        var itemDiv = addItemToSelect(item, true);
+        if (itemDiv) {
+          resultsList.appendChild(itemDiv);
+          addedCount++;
+        }
+      });
+      console.log("[NovaPoshta] Added", addedCount, "items to dropdown for", select.id);
+    }).catch(function(err) {
+      console.error("[NovaPoshta] Search error for", select.id, ":", err);
+      if (!wrapper || !resultsList) return;
+      if (String(select.dataset.currentRequestId) !== String(currentRequestId)) return;
+      resultsList.innerHTML = '<div class="np-select-error">Помилка завантаження</div>';
+    });
+  }, 500);
+  
+  displayInput.addEventListener("click", function(e) {
+    e.preventDefault();
+    if (isOpen) {
+      hideDropdown();
+    } else {
+      showDropdown();
     }
-  }).catch(function(err) {
-    console.error("[NovaPoshta] Error loading initial items:", err);
   });
-}
-
-updateDisplay();
+  
+  searchInput.addEventListener("input", function(e) {
+    var query = (e.target.value || "").trim();
+    console.log("[NovaPoshta] Search input changed for", select.id, "query:", query, "length:", query.length, "minChars:", minChars);
+    if (query.length >= minChars) {
+      console.log("[NovaPoshta] Triggering search for", select.id, "with query:", query);
+      searchDebounced(query);
+    } else {
+      console.log("[NovaPoshta] Query too short, showing initial items for", select.id);
+      showInitialItems();
+    }
+  });
+  
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape" && isOpen) {
+      hideDropdown();
+    }
+  });
+  
+  document.addEventListener("click", function(e) {
+    if (isOpen && !wrapper.contains(e.target)) {
+      hideDropdown();
+    }
+  });
+  
+  select.addEventListener("change", function() {
+    updateDisplay();
+  });
+  
+  if (initialLoadFn && typeof initialLoadFn === "function") {
+    initialLoadFn(15).then(function(items) {
+      if (items && items.length > 0) {
+        var seen = {};
+        items.forEach(function(item) {
+          var value = item.id || item.Ref || item.ref;
+          if (value && !seen[value]) {
+            seen[value] = true;
+            addItemToSelect(item, false);
+          }
+        });
+        console.log("[NovaPoshta] Loaded", items.length, "initial items for", select.id);
+        updateDisplay();
+      }
+    }).catch(function(err) {
+      console.error("[NovaPoshta] Error loading initial items:", err);
+    });
+  }
+  
+  updateDisplay();
 }
 
 function initNovaPostSelects() {
-console.log("[NovaPoshta] initNovaPostSelects: initializing...");
+  console.log("[NovaPoshta] initNovaPostSelects: initializing...");
   var citySelect = document.getElementById("City");
   var addrSelect = document.getElementById("Address");
   var deptSelect = document.getElementById("Department");
 
-console.log("[NovaPoshta] initNovaPostSelects: citySelect found:", !!citySelect, "addrSelect:", !!addrSelect, "deptSelect:", !!deptSelect);
-
-if (citySelect && !citySelect.dataset.npInitialized) {
-  citySelect.dataset.npInitialized = "1";
+  console.log("[NovaPoshta] initNovaPostSelects: citySelect found:", !!citySelect, "addrSelect:", !!addrSelect, "deptSelect:", !!deptSelect);
   
-  initNovaPostAutocomplete(citySelect, function(query) {
-    return npSearchCities(query);
-  }, 2, function(limit) {
-    return npLoadInitialCities(limit);
+  if (citySelect && !citySelect.dataset.npInitialized) {
+    citySelect.dataset.npInitialized = "1";
+    
+    initNovaPostAutocomplete(citySelect, function(query) {
+      return npSearchCities(query);
+    }, 2, function(limit) {
+      return npLoadInitialCities(limit);
     });
 
     citySelect.addEventListener("change", function () {
       npState.cityId = citySelect.value || null;
       if (addrSelect) {
-      addrSelect.value = "";
+        addrSelect.value = "";
         addrSelect.innerHTML = '<option value="">Введіть адресу</option>';
-      var addrWrapper = addrSelect.closest(".np-select-wrapper");
-      if (addrWrapper) {
-        var addrDisplay = addrWrapper.querySelector('.np-select-display') || addrWrapper.querySelector('.w-embed .np-select-display');
-        if (addrDisplay) {
-          addrDisplay.value = "";
-          addrDisplay.classList.add("placeholder");
+        var addrWrapper = addrSelect.closest(".np-select-wrapper");
+        if (addrWrapper) {
+          var addrDisplay = addrWrapper.querySelector('.np-select-display') || addrWrapper.querySelector('.w-embed .np-select-display');
+          if (addrDisplay) {
+            addrDisplay.value = "";
+            addrDisplay.classList.add("placeholder");
+          }
+        }
+        delete addrSelect.dataset.npInitialized;
+        delete addrSelect.dataset.npAutocomplete;
+        if (npState.cityId) {
+          initNovaPostAutocomplete(addrSelect, function(query) {
+            if (!npState.cityId) return Promise.resolve([]);
+            return npSearchStreets(query, npState.cityId);
+          }, 2, function(limit) {
+            if (!npState.cityId) return Promise.resolve([]);
+            return npLoadInitialStreets(npState.cityId, limit);
+          });
         }
       }
-      delete addrSelect.dataset.npInitialized;
-      delete addrSelect.dataset.npAutocomplete;
-      if (npState.cityId) {
-        initNovaPostAutocomplete(addrSelect, function(query) {
-          if (!npState.cityId) return Promise.resolve([]);
-          return npSearchStreets(query, npState.cityId);
-        }, 2, function(limit) {
-          if (!npState.cityId) return Promise.resolve([]);
-          return npLoadInitialStreets(npState.cityId, limit);
-        });
-      }
-    }
-    if (deptSelect) {
-      deptSelect.value = "";
-      deptSelect.innerHTML = '<option value="">Введіть Номер відділення чи поштомату</option>';
-      var deptWrapper = deptSelect.closest(".np-select-wrapper");
-      if (deptWrapper) {
-        var deptDisplay = deptWrapper.querySelector('.np-select-display') || deptWrapper.querySelector('.w-embed .np-select-display');
-        if (deptDisplay) {
-          deptDisplay.value = "";
-          deptDisplay.classList.add("placeholder");
+      if (deptSelect) {
+        deptSelect.value = "";
+        deptSelect.innerHTML = '<option value="">Введіть Номер відділення чи поштомату</option>';
+        var deptWrapper = deptSelect.closest(".np-select-wrapper");
+        if (deptWrapper) {
+          var deptDisplay = deptWrapper.querySelector('.np-select-display') || deptWrapper.querySelector('.w-embed .np-select-display');
+          if (deptDisplay) {
+            deptDisplay.value = "";
+            deptDisplay.classList.add("placeholder");
+          }
+        }
+        delete deptSelect.dataset.npInitialized;
+        delete deptSelect.dataset.npAutocomplete;
+        if (npState.cityId) {
+          initNovaPostAutocomplete(deptSelect, function(query) {
+            if (!npState.cityId) return Promise.resolve([]);
+            return npSearchBranches(query, npState.cityId);
+          }, 2, function(limit) {
+            if (!npState.cityId) return Promise.resolve([]);
+            return npLoadInitialBranches(npState.cityId, limit);
+          });
         }
       }
-      delete deptSelect.dataset.npInitialized;
-      delete deptSelect.dataset.npAutocomplete;
-      if (npState.cityId) {
-        initNovaPostAutocomplete(deptSelect, function(query) {
-          if (!npState.cityId) return Promise.resolve([]);
-          return npSearchBranches(query, npState.cityId);
-        }, 2, function(limit) {
-          if (!npState.cityId) return Promise.resolve([]);
-          return npLoadInitialBranches(npState.cityId, limit);
-        });
-      }
-    }
-  });
-}
-
-if (addrSelect && !addrSelect.dataset.npInitialized && npState.cityId) {
-  addrSelect.dataset.npInitialized = "1";
-  initNovaPostAutocomplete(addrSelect, function(query) {
-    if (!npState.cityId) return Promise.resolve([]);
-    return npSearchStreets(query, npState.cityId);
-  }, 2, function(limit) {
-    if (!npState.cityId) return Promise.resolve([]);
-    return npLoadInitialStreets(npState.cityId, limit);
-  });
-}
-
-if (deptSelect && !deptSelect.dataset.npInitialized && npState.cityId) {
-  deptSelect.dataset.npInitialized = "1";
-  initNovaPostAutocomplete(deptSelect, function(query) {
-    if (!npState.cityId) return Promise.resolve([]);
-    return npSearchBranches(query, npState.cityId);
-  }, 2, function(limit) {
-    if (!npState.cityId) return Promise.resolve([]);
-    return npLoadInitialBranches(npState.cityId, limit);
-  });
+    });
+  }
+  
+  if (addrSelect && !addrSelect.dataset.npInitialized && npState.cityId) {
+    addrSelect.dataset.npInitialized = "1";
+    initNovaPostAutocomplete(addrSelect, function(query) {
+      if (!npState.cityId) return Promise.resolve([]);
+      return npSearchStreets(query, npState.cityId);
+    }, 2, function(limit) {
+      if (!npState.cityId) return Promise.resolve([]);
+      return npLoadInitialStreets(npState.cityId, limit);
+    });
+  }
+  
+  if (deptSelect && !deptSelect.dataset.npInitialized && npState.cityId) {
+    deptSelect.dataset.npInitialized = "1";
+    initNovaPostAutocomplete(deptSelect, function(query) {
+      if (!npState.cityId) return Promise.resolve([]);
+      return npSearchBranches(query, npState.cityId);
+    }, 2, function(limit) {
+      if (!npState.cityId) return Promise.resolve([]);
+      return npLoadInitialBranches(npState.cityId, limit);
+    });
   }
 }
 
@@ -1909,27 +2055,27 @@ function initDeliveryFormValidation() {
     });
     return r ? r.value : null;
   }
-
-  function updateRequiredFields() {
-    var type = getType();
-    
-    if (type === "courier") {
-      if (addrSelect) addrSelect.setAttribute("required", "required");
-      if (buildingInput) buildingInput.setAttribute("required", "required");
-      if (flatInput) flatInput.setAttribute("required", "required");
-      if (deptSelect) deptSelect.removeAttribute("required");
-    } else if (type === "pickup") {
-      if (deptSelect) deptSelect.setAttribute("required", "required");
-      if (addrSelect) addrSelect.removeAttribute("required");
-      if (buildingInput) buildingInput.removeAttribute("required");
-      if (flatInput) flatInput.removeAttribute("required");
-    } else {
-      if (addrSelect) addrSelect.removeAttribute("required");
-      if (buildingInput) buildingInput.removeAttribute("required");
-      if (flatInput) flatInput.removeAttribute("required");
-      if (deptSelect) deptSelect.removeAttribute("required");
+  
+    function updateRequiredFields() {
+      var type = getType();
+      
+      if (type === "courier") {
+        if (addrSelect) addrSelect.setAttribute("required", "required");
+        if (buildingInput) buildingInput.removeAttribute("required");
+        if (flatInput) flatInput.removeAttribute("required");
+        if (deptSelect) deptSelect.removeAttribute("required");
+      } else if (type === "pickup") {
+        if (deptSelect) deptSelect.setAttribute("required", "required");
+        if (addrSelect) addrSelect.removeAttribute("required");
+        if (buildingInput) buildingInput.removeAttribute("required");
+        if (flatInput) flatInput.removeAttribute("required");
+      } else {
+        if (addrSelect) addrSelect.removeAttribute("required");
+        if (buildingInput) buildingInput.removeAttribute("required");
+        if (flatInput) flatInput.removeAttribute("required");
+        if (deptSelect) deptSelect.removeAttribute("required");
+      }
     }
-  }
 
   function validate() {
     var cityOk = !!(citySelect && citySelect.value);
@@ -1940,79 +2086,121 @@ function initDeliveryFormValidation() {
     var buildingOk = true;
     var flatOk = true;
 
-    if (type === "courier") {
-      addrOk = !!(addrSelect && addrSelect.value);
-      buildingOk = !!(buildingInput && buildingInput.value.trim());
-      flatOk = !!(flatInput && flatInput.value.trim());
-      deptOk = true;
-    } else if (type === "pickup") {
-      deptOk = !!(deptSelect && deptSelect.value);
-      addrOk = true;
-      buildingOk = true;
-      flatOk = true;
-    }
-
-    citySelect && setFieldState(citySelect, cityOk ? true : null);
-    setFieldState(phoneInput, phoneOk ? true : null);
-
-    if (type === "courier") {
-      addrSelect && setFieldState(addrSelect, addrOk ? true : null);
-      buildingInput && setFieldState(buildingInput, buildingOk ? true : null);
-      flatInput && setFieldState(flatInput, flatOk ? true : null);
-      deptSelect && deptSelect.classList.remove("error", "is-validated");
-    } else if (type === "pickup") {
-      deptSelect && setFieldState(deptSelect, deptOk ? true : null);
-      addrSelect && addrSelect.classList.remove("error", "is-validated");
-      buildingInput &&
-        buildingInput.classList.remove("error", "is-validated");
-      flatInput && flatInput.classList.remove("error", "is-validated");
-    }
-
-    var allOk =
-      cityOk && phoneOk && type && addrOk && deptOk && buildingOk && flatOk;
-    
-    console.log("[DeliveryForm] Validation:", {
-      cityOk: cityOk,
-      phoneOk: phoneOk,
-      type: type,
-      addrOk: addrOk,
-      deptOk: deptOk,
-      buildingOk: buildingOk,
-      flatOk: flatOk,
-      allOk: allOk
-    });
-    
+      if (type === "courier") {
+        addrOk = !!(addrSelect && addrSelect.value);
+        var buildingValue = buildingInput ? buildingInput.value.trim() : "";
+        var flatValue = flatInput ? flatInput.value.trim() : "";
+        var buildingOrFlatOk = !!(buildingValue || flatValue);
+        buildingOk = buildingOrFlatOk;
+        flatOk = buildingOrFlatOk;
+        deptOk = true;
+      } else if (type === "pickup") {
+        deptOk = !!(deptSelect && deptSelect.value);
+        addrOk = true;
+        buildingOk = true;
+        flatOk = true;
+      }
+      
+      citySelect && setFieldState(citySelect, cityOk ? true : null);
+      setFieldState(phoneInput, phoneOk ? true : null);
+      
+      if (type === "courier") {
+        addrSelect && setFieldState(addrSelect, addrOk ? true : null);
+        var buildingValue = buildingInput ? buildingInput.value.trim() : "";
+        var flatValue = flatInput ? flatInput.value.trim() : "";
+        var buildingOrFlatOk = !!(buildingValue || flatValue);
+        if (buildingInput) {
+          if (buildingOrFlatOk) {
+            setFieldState(buildingInput, true);
+          } else {
+            setFieldState(buildingInput, false);
+          }
+        }
+        if (flatInput) {
+          if (buildingOrFlatOk) {
+            setFieldState(flatInput, true);
+          } else {
+            setFieldState(flatInput, false);
+          }
+        }
+        deptSelect && deptSelect.classList.remove("error", "is-validated");
+      } else if (type === "pickup") {
+        deptSelect && setFieldState(deptSelect, deptOk ? true : null);
+        addrSelect && addrSelect.classList.remove("error", "is-validated");
+        buildingInput &&
+          buildingInput.classList.remove("error", "is-validated");
+        flatInput && flatInput.classList.remove("error", "is-validated");
+      }
+      
+      var allOk =
+        cityOk && phoneOk && type && addrOk && deptOk && buildingOk && flatOk;
+      
+      console.log("[DeliveryForm] Validation:", {
+        cityOk: cityOk,
+        phoneOk: phoneOk,
+        type: type,
+        addrOk: addrOk,
+        deptOk: deptOk,
+        buildingOk: buildingOk,
+        flatOk: flatOk,
+        allOk: allOk
+      });
+      
     disableButton(nextBtn, !allOk);
   }
 
-  window.deliveryFormValidate = validate;
-
-  if (citySelect) {
-    citySelect.addEventListener("change", validate);
-    citySelect.addEventListener("input", validate);
-  }
+    window.deliveryFormValidate = validate;
+  
+    if (citySelect) {
+      citySelect.addEventListener("change", validate);
+      citySelect.addEventListener("input", validate);
+    }
   if (phoneInput) {
     phoneInput.addEventListener("input", validate);
     phoneInput.addEventListener("change", validate);
   }
   radios.forEach(function (r) {
-    r.addEventListener("change", function() {
-      updateRequiredFields();
-      validate();
+      r.addEventListener("change", function() {
+        updateRequiredFields();
+        validate();
+      });
     });
-  });
-  
-  updateRequiredFields();
-  if (addrSelect) {
-    addrSelect.addEventListener("change", validate);
-    addrSelect.addEventListener("input", validate);
-  }
-  if (deptSelect) {
-    deptSelect.addEventListener("change", validate);
-    deptSelect.addEventListener("input", validate);
-  }
-  if (buildingInput) buildingInput.addEventListener("input", validate);
-  if (flatInput) flatInput.addEventListener("input", validate);
+    
+    updateRequiredFields();
+    if (addrSelect) {
+      addrSelect.addEventListener("change", validate);
+      addrSelect.addEventListener("input", validate);
+    }
+    if (deptSelect) {
+      deptSelect.addEventListener("change", validate);
+      deptSelect.addEventListener("input", validate);
+    }
+    if (buildingInput) {
+      buildingInput.addEventListener("input", function() {
+        setTimeout(function() {
+          validate();
+        }, 10);
+      });
+      buildingInput.addEventListener("change", function() {
+        setTimeout(function() {
+          validate();
+        }, 10);
+      });
+    }
+    if (flatInput) {
+      flatInput.addEventListener("input", function() {
+        setTimeout(function() {
+          validate();
+        }, 10);
+      });
+      flatInput.addEventListener("change", function() {
+        setTimeout(function() {
+          validate();
+        }, 10);
+      });
+    }
+    
+    validate();
 
   if (nextBtn) {
     nextBtn.addEventListener("click", function (e) {
@@ -2020,9 +2208,9 @@ function initDeliveryFormValidation() {
       validate();
       if (nextBtn.disabled) return;
       var deliveryDialog = deliveryStep.closest(".modal__dialog");
-      var paymentStep = qs('[data-step="plastic-oplata"]', deliveryDialog) || qs(".modal-step-esim.is--payment", deliveryDialog) || qs(".modal-step-esim.is--1", deliveryDialog);
+        var paymentStep = qs('[data-step="plastic-oplata"]', deliveryDialog) || qs(".modal-step-esim.is--payment", deliveryDialog) || qs(".modal-step-esim.is--1", deliveryDialog);
       if (deliveryStep && paymentStep) {
-        updatePaymentStepData(deliveryStep, paymentStep);
+          updatePaymentStepData(deliveryStep, paymentStep);
         deliveryStep.style.display = "none";
         deliveryStep.classList.remove("is-active");
         paymentStep.style.display = "";
@@ -2032,428 +2220,524 @@ function initDeliveryFormValidation() {
   }
   validate();
 }
-
-function updatePaymentStepData(deliveryStep, paymentStep) {
-  var form = deliveryStep.closest("form");
-  if (!form) return;
   
-  var citySelect = qs("#City", deliveryStep);
-  var addrSelect = qs("#Address", deliveryStep);
-  var deptSelect = qs("#Department", deliveryStep);
-  var deliveryTypeRadios = qsa('input[name="Delivery-Type"]', deliveryStep);
-  var buildingInput = qs("#Building", deliveryStep);
-  var flatInput = qs("#Flat", deliveryStep);
-  
-  var cityValue = "";
-  if (citySelect && citySelect.value) {
-    var cityDisplay = qs('[data-np-display="City"]', deliveryStep);
-    if (cityDisplay && cityDisplay.value) {
-      cityValue = cityDisplay.value.trim();
-    } else {
-      var cityOption = citySelect.querySelector('option[value="' + citySelect.value + '"]');
-      if (cityOption) {
-        cityValue = cityOption.textContent.trim();
-      }
-    }
-  }
-  
-  var addressValue = "";
-  if (addrSelect && addrSelect.value) {
-    var addrDisplay = qs('[data-np-display="Address"]', deliveryStep);
-    if (addrDisplay && addrDisplay.value) {
-      addressValue = addrDisplay.value.trim();
-    } else {
-      var addrOption = addrSelect.querySelector('option[value="' + addrSelect.value + '"]');
-      if (addrOption) {
-        addressValue = addrOption.textContent.trim();
-      }
-    }
-    if (buildingInput && buildingInput.value.trim()) {
-      addressValue += ", " + buildingInput.value.trim();
-    }
-    if (flatInput && flatInput.value.trim()) {
-      addressValue += ", кв. " + flatInput.value.trim();
-    }
-  }
-  
-  var departmentValue = "";
-  if (deptSelect && deptSelect.value) {
-    var deptDisplay = qs('[data-np-display="Department"]', deliveryStep);
-    if (deptDisplay && deptDisplay.value) {
-      departmentValue = deptDisplay.value.trim();
-    } else {
-      var deptOption = deptSelect.querySelector('option[value="' + deptSelect.value + '"]');
-      if (deptOption) {
-        departmentValue = deptOption.textContent.trim();
-      }
-    }
-  }
-  
-  var deliveryTypeValue = "";
-  var checkedDeliveryType = Array.prototype.find.call(deliveryTypeRadios, function(r) { return r.checked; });
-  if (checkedDeliveryType) {
-    if (checkedDeliveryType.value === "courier") {
-      deliveryTypeValue = "Кур'єр на вашу адресу";
-    } else if (checkedDeliveryType.value === "pickup") {
-      deliveryTypeValue = "Самовивіз з Нової Пошти або Поштомату";
-    }
-  }
-  
-  var paymentRows = qsa(".modal-esim_table-row", paymentStep);
-  paymentRows.forEach(function(row) {
-    var label = qs(".modal-esim_table-label", row);
-    if (!label) return;
+  function updatePaymentStepData(deliveryStep, paymentStep) {
+    var form = deliveryStep.closest("form");
+    if (!form) return;
     
-    var labelText = label.textContent.trim();
-    var items = qsa(".modal-esim_table-item", row);
-    if (items.length < 2) return;
+    var citySelect = qs("#City", deliveryStep);
+    var addrSelect = qs("#Address", deliveryStep);
+    var deptSelect = qs("#Department", deliveryStep);
+    var deliveryTypeRadios = qsa('input[name="Delivery-Type"]', deliveryStep);
+    var buildingInput = qs("#Building", deliveryStep);
+    var flatInput = qs("#Flat", deliveryStep);
     
-    var valueCell = items[1];
-    var valueDiv = qs("div", valueCell);
-    
-    if (labelText.indexOf("Місто") === 0 || labelText.indexOf("Город") === 0) {
-      if (valueDiv) valueDiv.textContent = cityValue || "";
-    } else if (labelText.indexOf("Доставка") === 0 || labelText.indexOf("Способ доставки") === 0) {
-      if (valueDiv) valueDiv.textContent = deliveryTypeValue || "";
-    } else if (labelText.indexOf("Адреса") === 0 || labelText.indexOf("Адрес") === 0) {
-      if (checkedDeliveryType && checkedDeliveryType.value === "pickup") {
-        row.style.display = "none";
+    var cityValue = "";
+    if (citySelect && citySelect.value) {
+      var cityDisplay = qs('[data-np-display="City"]', deliveryStep);
+      if (cityDisplay && cityDisplay.value) {
+        cityValue = cityDisplay.value.trim();
       } else {
-        row.style.display = "";
-        if (valueDiv) valueDiv.textContent = addressValue || "";
-      }
-    } else if (labelText.indexOf("Номер відділення") === 0 || labelText.indexOf("Отделение") === 0) {
-      if (checkedDeliveryType && checkedDeliveryType.value === "courier") {
-        row.style.display = "none";
-      } else {
-        row.style.display = "";
-        if (valueDiv) valueDiv.textContent = departmentValue || "";
-      }
-    } else if (labelText.indexOf("Загальна вартість") === 0 || labelText.indexOf("Общая стоимость") === 0) {
-      var priceDiv = qs(".modal-esim_price", valueCell) || valueDiv;
-      if (priceDiv) {
-        var priceText = priceDiv.textContent.trim();
-        if (priceText && !priceText.endsWith("₴") && !priceText.endsWith("грн")) {
-          priceDiv.textContent = priceText + " ₴";
+        var cityOption = citySelect.querySelector('option[value="' + citySelect.value + '"]');
+        if (cityOption) {
+          cityValue = cityOption.textContent.trim();
         }
       }
     }
-  });
-}
-
-function saveOrderData(formData) {
-  try {
-    var orderData = {
-      timestamp: new Date().toISOString(),
-      firstName: formData.get("first-name") || "",
-      lastName: formData.get("last-name") || "",
-      email: formData.get("email") || "",
-      plan: formData.get("plan") || "",
-      price: formData.get("price") || "",
-      simType: formData.get("sim_type") || "",
-      city: formData.get("City") || "",
-      deliveryPhone: formData.get("delivery-phone") || "",
-      deliveryType: formData.get("Delivery-Type") || "",
-      address: formData.get("Address") || "",
-      building: formData.get("Building") || "",
-      flat: formData.get("Flat") || "",
-      department: formData.get("Department") || ""
-    };
     
-    var savedOrders = JSON.parse(localStorage.getItem("utm_orders") || "[]");
-    savedOrders.push(orderData);
-    localStorage.setItem("utm_orders", JSON.stringify(savedOrders));
-    
-    console.log("[UTM] Order data saved:", orderData);
-    return orderData;
-  } catch (e) {
-    console.error("[UTM] Error saving order data:", e);
-    return null;
-  }
-}
-
-function processCity24Payment(orderData, callback) {
-  console.log("[City24] Processing payment for order:", orderData);
-  
-  setTimeout(function() {
-    var paymentResult = {
-      success: true,
-      orderId: "CITY24-" + Date.now(),
-      transactionId: "TXN-" + Math.random().toString(36).substr(2, 9).toUpperCase(),
-      amount: orderData.price || "299",
-      currency: "UAH",
-      status: "completed",
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log("[City24] Payment processed:", paymentResult);
-    
-    if (callback) {
-      callback(paymentResult);
-    }
-  }, 2000);
-}
-
-function initPlasticPayment() {
-  var plasticDialog = document.getElementById("modal-plastic");
-  if (!plasticDialog) return;
-  
-  var paymentStep = qs('[data-step="plastic-oplata"]', plasticDialog) || qs(".modal-step-esim.is--1", plasticDialog);
-  if (!paymentStep) return;
-  
-  var paymentBtn = qs(".button.is-validation", paymentStep);
-  if (!paymentBtn) return;
-  
-  var form = plasticDialog.querySelector("form");
-  if (!form) return;
-  
-  paymentBtn.addEventListener("click", function(e) {
-    e.preventDefault();
-    
-    if (paymentBtn.disabled) return;
-    
-    var formData = new FormData(form);
-    var orderData = saveOrderData(formData);
-    
-    if (!orderData) {
-      console.error("[UTM] Failed to save order data");
-      return;
-    }
-    
-    disableButton(paymentBtn, true);
-    var btnContent = paymentBtn.querySelector("div");
-    if (btnContent) {
-      btnContent.textContent = "Обробка оплати...";
-    }
-    
-    processCity24Payment(orderData, function(paymentResult) {
-      if (paymentResult && paymentResult.success) {
-        var successStep = qs(".modal-success", plasticDialog);
-        if (successStep) {
-          paymentStep.style.display = "none";
-          paymentStep.classList.remove("is-active");
-          successStep.style.display = "";
-          successStep.classList.add("is-active");
-          
-          setTimeout(function() {
-            var link = successStep.querySelector(".modal-relink-text a");
-            if (link) {
-              var redirectUrl = "https://city24.ua/payment/success?orderId=" + paymentResult.orderId;
-              link.href = redirectUrl;
-            }
-          }, 0);
-        }
+    var addressValue = "";
+    if (addrSelect && addrSelect.value) {
+      var addrDisplay = qs('[data-np-display="Address"]', deliveryStep);
+      if (addrDisplay && addrDisplay.value) {
+        addressValue = addrDisplay.value.trim();
       } else {
-        var errorStep = qs(".modal-error-esim", plasticDialog);
-        if (errorStep) {
-          paymentStep.style.display = "none";
-          paymentStep.classList.remove("is-active");
-          errorStep.style.display = "";
-          errorStep.classList.add("is-active");
+        var addrOption = addrSelect.querySelector('option[value="' + addrSelect.value + '"]');
+        if (addrOption) {
+          addressValue = addrOption.textContent.trim();
         }
-        disableButton(paymentBtn, false);
-        if (btnContent) {
-          btnContent.textContent = "Оплатити";
+      }
+      if (buildingInput && buildingInput.value.trim()) {
+        addressValue += ", " + buildingInput.value.trim();
+      }
+      if (flatInput && flatInput.value.trim()) {
+        addressValue += ", кв. " + flatInput.value.trim();
+      }
+    }
+    
+    var departmentValue = "";
+    if (deptSelect && deptSelect.value) {
+      var deptDisplay = qs('[data-np-display="Department"]', deliveryStep);
+      if (deptDisplay && deptDisplay.value) {
+        departmentValue = deptDisplay.value.trim();
+      } else {
+        var deptOption = deptSelect.querySelector('option[value="' + deptSelect.value + '"]');
+        if (deptOption) {
+          departmentValue = deptOption.textContent.trim();
+        }
+      }
+    }
+    
+    var deliveryTypeValue = "";
+    var checkedDeliveryType = Array.prototype.find.call(deliveryTypeRadios, function(r) { return r.checked; });
+    if (checkedDeliveryType) {
+      if (checkedDeliveryType.value === "courier") {
+        deliveryTypeValue = "Кур'єр на вашу адресу";
+      } else if (checkedDeliveryType.value === "pickup") {
+        deliveryTypeValue = "Самовивіз з Нової Пошти або Поштомату";
+      }
+    }
+    
+    var paymentRows = qsa(".modal-esim_table-row", paymentStep);
+    paymentRows.forEach(function(row) {
+      var label = qs(".modal-esim_table-label", row);
+      if (!label) return;
+      
+      var labelText = label.textContent.trim();
+      var items = qsa(".modal-esim_table-item", row);
+      if (items.length < 2) return;
+      
+      var valueCell = items[1];
+      var valueDiv = qs("div", valueCell);
+      
+      if (labelText.indexOf("Місто") === 0 || labelText.indexOf("Город") === 0) {
+        if (valueDiv) valueDiv.textContent = cityValue || "";
+      } else if (labelText.indexOf("Доставка") === 0 || labelText.indexOf("Способ доставки") === 0) {
+        if (valueDiv) valueDiv.textContent = deliveryTypeValue || "";
+      } else if (labelText.indexOf("Адреса") === 0 || labelText.indexOf("Адрес") === 0) {
+        if (checkedDeliveryType && checkedDeliveryType.value === "pickup") {
+          row.style.display = "none";
+        } else {
+          row.style.display = "";
+          if (valueDiv) valueDiv.textContent = addressValue || "";
+        }
+      } else if (labelText.indexOf("Номер відділення") === 0 || labelText.indexOf("Отделение") === 0) {
+        if (checkedDeliveryType && checkedDeliveryType.value === "courier") {
+          row.style.display = "none";
+        } else {
+          row.style.display = "";
+          if (valueDiv) valueDiv.textContent = departmentValue || "";
+        }
+      } else if (labelText.indexOf("Загальна вартість") === 0 || labelText.indexOf("Общая стоимость") === 0) {
+        var priceDiv = qs(".modal-esim_price", valueCell) || valueDiv;
+        if (priceDiv) {
+          var priceText = priceDiv.textContent.trim();
+          if (!priceText) {
+            var orderState = window.utmOrderState || {};
+            priceText = orderState.planPrice || "";
+          }
+          if (priceText && !priceText.endsWith("₴") && !priceText.endsWith("грн")) {
+            priceDiv.textContent = priceText + " ₴";
+          } else if (priceText) {
+            priceDiv.textContent = priceText;
+          }
         }
       }
     });
-  });
-}
+    
+    var paymentBtn = qs(".button.is-validation", paymentStep);
+    if (paymentBtn) {
+      disableButton(paymentBtn, false);
+    }
+  }
+  
+  function saveOrderData(formData) {
+    try {
+      var orderData = {
+        timestamp: new Date().toISOString(),
+        firstName: formData.get("first-name") || "",
+        lastName: formData.get("last-name") || "",
+        email: formData.get("email") || "",
+        plan: formData.get("plan") || "",
+        price: formData.get("price") || "",
+        simType: formData.get("sim_type") || "",
+        city: formData.get("City") || "",
+        deliveryPhone: formData.get("delivery-phone") || "",
+        deliveryType: formData.get("Delivery-Type") || "",
+        address: formData.get("Address") || "",
+        building: formData.get("Building") || "",
+        flat: formData.get("Flat") || "",
+        department: formData.get("Department") || ""
+      };
+      
+      var savedOrders = JSON.parse(localStorage.getItem("utm_orders") || "[]");
+      savedOrders.push(orderData);
+      localStorage.setItem("utm_orders", JSON.stringify(savedOrders));
+      
+      console.log("[UTM] Order data saved:", orderData);
+      return orderData;
+    } catch (e) {
+      console.error("[UTM] Error saving order data:", e);
+      return null;
+    }
+  }
+  
+  function processCity24Payment(orderData, callback) {
+    console.log("[City24] Processing payment for order:", orderData);
+    
+    setTimeout(function() {
+      var paymentResult = {
+        success: true,
+        orderId: "CITY24-" + Date.now(),
+        transactionId: "TXN-" + Math.random().toString(36).substr(2, 9).toUpperCase(),
+        amount: orderData.price || "299",
+        currency: "UAH",
+        status: "completed",
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log("[City24] Payment processed:", paymentResult);
+      
+      if (callback) {
+        callback(paymentResult);
+      }
+    }, 2000);
+  }
+  
+  function initPlasticPayment() {
+    var plasticDialog = document.getElementById("modal-plastic");
+    if (!plasticDialog) return;
+    
+    var paymentStep = qs('[data-step="plastic-oplata"]', plasticDialog) || qs(".modal-step-esim.is--1", plasticDialog);
+    if (!paymentStep) return;
+    
+    var paymentBtn = qs(".button.is-validation", paymentStep);
+    if (!paymentBtn) return;
+    
+    disableButton(paymentBtn, false);
+    
+    var form = plasticDialog.querySelector("form");
+    if (!form) return;
+    
+    paymentBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      
+      if (paymentBtn.disabled) return;
+      
+      var formData = new FormData(form);
+      var orderData = saveOrderData(formData);
+      
+      if (!orderData) {
+        console.error("[UTM] Failed to save order data");
+        return;
+      }
+      
+      disableButton(paymentBtn, true);
+      var btnContent = paymentBtn.querySelector("div");
+      if (btnContent) {
+        btnContent.textContent = "Обробка оплати...";
+      }
+      
+      processCity24Payment(orderData, function(paymentResult) {
+        if (paymentResult && paymentResult.success) {
+          var successStep = qs(".modal-success", plasticDialog);
+          if (successStep) {
+            paymentStep.style.display = "none";
+            paymentStep.classList.remove("is-active");
+            successStep.style.display = "";
+            successStep.classList.add("is-active");
+            
+            setTimeout(function() {
+              var link = successStep.querySelector(".modal-relink-text a");
+              if (link) {
+                var redirectUrl = "https://city24.ua/payment/success?orderId=" + paymentResult.orderId;
+                link.href = redirectUrl;
+              }
+            }, 0);
+          }
+        } else {
+          var errorStep = qs(".modal-error-esim", plasticDialog);
+          if (errorStep) {
+            paymentStep.style.display = "none";
+            paymentStep.classList.remove("is-active");
+            errorStep.style.display = "";
+            errorStep.classList.add("is-active");
+          }
+          disableButton(paymentBtn, false);
+          if (btnContent) {
+            btnContent.textContent = "Оплатити";
+          }
+        }
+      });
+    });
+  }
 
 function initGlobalPhoneMasks() {
   bindPhoneMask(document.getElementById("phone"));
   bindPhoneMask(document.getElementById("delivery-phone"));
 }
 
-// Проверяем, загружен ли DOM
-if (document.readyState === "loading") {
-document.addEventListener("DOMContentLoaded", initAll);
-} else {
-// DOM уже загружен
-initAll();
-}
-
-function initAll() {
-console.log("[UTM] DOMContentLoaded: initializing all modules...");
-try {
+  // Проверяем, загружен ли DOM
+  if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initAll);
+  } else {
+  // DOM уже загружен
+  initAll();
+  }
+  
+  function initAll() {
+  console.log("[UTM] DOMContentLoaded: initializing all modules...");
+   try {
   initGlobalPhoneMasks();
+     initNewClientButton();
   initPlanSelection();
   initTopUpModal();
   initEsimOrderModal();
   initNovaPostSelects();
   initDeliveryTypeToggle();
   initDeliveryFormValidation();
-  initPlasticPayment();
-  console.log("[UTM] DOMContentLoaded: all modules initialized");
-} catch (e) {
-  console.error("[UTM] Error during initialization:", e);
-}
-}
-
-// Также пробуем инициализировать при полной загрузке страницы
-window.addEventListener("load", function() {
-console.log("[UTM] Window loaded, checking NovaPoshta selects...");
-var citySelect = document.getElementById("City");
-if (citySelect) {
-  console.log("[UTM] City select found on window load, re-initializing NovaPoshta");
-  initNovaPostSelects();
-}
+     initPlasticPayment();
+     console.log("[UTM] DOMContentLoaded: all modules initialized");
+   } catch (e) {
+     console.error("[UTM] Error during initialization:", e);
+   }
+   }
+  
+  // Также пробуем инициализировать при полной загрузке страницы
+  window.addEventListener("load", function() {
+  console.log("[UTM] Window loaded, checking NovaPoshta selects...");
+  var citySelect = document.getElementById("City");
+  if (citySelect) {
+    console.log("[UTM] City select found on window load, re-initializing NovaPoshta");
+    initNovaPostSelects();
+  }
 });
 })();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-(function initSwipers() {
-if (typeof window.Swiper === "undefined") {
-  console.warn("[Swiper] Not found on page.");
-  return;
-}
-
-var SLIDERS = [
-  {
-    key: "plan",
-    container: '[data-swiper="planSlider"]',
-    pagination: '[data-slider="planPagination"]',
-    options: {
-      pagination: { el: '[data-slider="planPagination"]', clickable: true },
-      breakpoints: {
-        991: { slidesPerView: 1.8, spaceBetween: 24 },
-        768: { slidesPerView: 1.4, spaceBetween: 20 },
-        468: { slidesPerView: 1, spaceBetween: 16 },
-        0:   { slidesPerView: 1, spaceBetween: 12, initialSlide: 1 },
-      },
-    },
-  },
-  {
-    key: "planModal",
-    container: '[data-swiper="planSliderModal"]',
-    pagination: '[data-slider="planPaginationModal"]',
-    options: {
-      pagination: { el: '[data-slider="planPaginationModal"]', clickable: true },
-      breakpoints: {
-        991: { slidesPerView: 1.8, spaceBetween: 24 },
-        768: { slidesPerView: 1.4, spaceBetween: 20 },
-        468: { slidesPerView: 1, spaceBetween: 16 },
-        0:   { slidesPerView: 1, spaceBetween: 12, initialSlide: 1 },
-      },
-    },
-    desktopOnly: true,
-    minSlides: 3,
-  },
-  {
-    key: "about",
-    container: '[data-swiper="aboutSlider"]',
-    pagination: '[data-slider="aboutPagination"]',
-    options: {
-      pagination: { el: '[data-slider="aboutPagination"]', clickable: true },
-      spaceBetween: 32,
-      breakpoints: {
-        991: { slidesPerView: 2.2, spaceBetween: 32 },
-        768: { slidesPerView: 1.8, spaceBetween: 28 },
-        468: { slidesPerView: 1.2, spaceBetween: 24 },
-        0:   { slidesPerView: 1.1, spaceBetween: 20 },
-      },
-    },
-  },
-];
-
-var instances = new Map();
-var mql = window.matchMedia("(max-width: 991px)");
-
-function createIfNeeded(cfg) {
-  if (instances.has(cfg.key)) return;
-  var el = document.querySelector(cfg.container);
-  if (!el) return;
-
-  if (cfg.desktopOnly && mql.matches) {
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  (function initSwipers() {
+  if (typeof window.Swiper === "undefined") {
+    console.warn("[Swiper] Not found on page.");
     return;
   }
-
-  if (cfg.minSlides) {
-    var slides = el.querySelectorAll(".swiper-slide");
-    if (!slides || slides.length < cfg.minSlides) {
+  
+  var SLIDERS = [
+    {
+      key: "plan",
+      container: '[data-swiper="planSlider"]',
+      pagination: '[data-slider="planPagination"]',
+      options: {
+        pagination: { el: '[data-slider="planPagination"]', clickable: true },
+        breakpoints: {
+          991: { slidesPerView: 1.8, spaceBetween: 24 },
+          768: { slidesPerView: 1.4, spaceBetween: 20 },
+          468: { slidesPerView: 1, spaceBetween: 16 },
+          0:   { slidesPerView: 1, spaceBetween: 12, initialSlide: 1 },
+        },
+      },
+    },
+    {
+      key: "planModal",
+      container: '[data-swiper="planSliderModal"]',
+      pagination: '[data-swiper="planPaginationModal"]',
+      options: {
+        slidesPerView: 3,
+        spaceBetween: 24,
+        pagination: { el: '[data-swiper="planPaginationModal"]', clickable: true },
+        breakpoints: {
+          991: { slidesPerView: 3, spaceBetween: 32 },
+          768: { slidesPerView: 2.2, spaceBetween: 24 },
+          468: { slidesPerView: 1.5, spaceBetween: 16 },
+          0:   { slidesPerView: 1, spaceBetween: 16 },
+        },
+      },
+    },
+    {
+      key: "about",
+      container: '[data-swiper="aboutSlider"]',
+      pagination: '[data-slider="aboutPagination"]',
+      options: {
+        pagination: { el: '[data-slider="aboutPagination"]', clickable: true },
+        spaceBetween: 32,
+        breakpoints: {
+          991: { slidesPerView: 2.2, spaceBetween: 32 },
+          768: { slidesPerView: 1.8, spaceBetween: 28 },
+          468: { slidesPerView: 1.2, spaceBetween: 24 },
+          0:   { slidesPerView: 1.1, spaceBetween: 20 },
+        },
+      },
+    },
+  ];
+  
+  var instances = new Map();
+  var mql = window.matchMedia("(max-width: 991px)");
+  
+  function createIfNeeded(cfg) {
+    if (instances.has(cfg.key)) {
+      console.log("[Swiper] Instance already exists for", cfg.key);
       return;
     }
-  }
-
-  if (cfg.pagination && !document.querySelector(cfg.pagination)) {
-    console.warn("[Swiper] Pagination element not found for " + cfg.key + ".");
-  }
-  var instance = new Swiper(el, cfg.options || {});
-  instances.set(cfg.key, instance);
-}
-
-function destroyIfExists(cfg) {
-  var inst = instances.get(cfg.key);
-  if (inst && typeof inst.destroy === "function") {
-    inst.destroy(true, true);
-  }
-  instances.delete(cfg.key);
-}
-
-function enableMobile() { 
-  SLIDERS.forEach(function(cfg) {
-    if (!cfg.desktopOnly) {
-      createIfNeeded(cfg);
-    } else {
-      destroyIfExists(cfg);
+    var el = document.querySelector(cfg.container);
+    if (!el) {
+      console.log("[Swiper] Container not found:", cfg.container);
+      return;
     }
-  });
-}
-function disableDesktop() { 
-  SLIDERS.forEach(function(cfg) {
-    if (!cfg.desktopOnly) {
-      destroyIfExists(cfg);
-    } else {
-      createIfNeeded(cfg);
+  
+    if (cfg.desktopOnly && mql.matches) {
+      console.log("[Swiper] Skipping", cfg.key, "- desktopOnly but on mobile");
+      return;
     }
-  });
-}
-function applyByViewport() { if (mql.matches) enableMobile(); else disableDesktop(); }
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", applyByViewport, { once: true });
-} else {
+  
+    if (cfg.minSlides) {
+      var slides = el.querySelectorAll(".swiper-slide, .swiper-slider, .w-dyn-item, [role='listitem']");
+      var slideCount = slides ? slides.length : 0;
+      console.log("[Swiper] Checking minSlides for", cfg.key, "- found", slideCount, "slides, required", cfg.minSlides);
+      if (!slides || slideCount < cfg.minSlides) {
+        console.log("[Swiper] Skipping", cfg.key, "- not enough slides");
+        return;
+      }
+    }
+  
+    if (cfg.pagination && !document.querySelector(cfg.pagination)) {
+      console.warn("[Swiper] Pagination element not found for " + cfg.key + ".");
+    }
+    console.log("[Swiper] Creating instance for", cfg.key);
+    var instance = new Swiper(el, cfg.options || {});
+    instances.set(cfg.key, instance);
+    console.log("[Swiper] Instance created for", cfg.key);
+  }
+  
+  function destroyIfExists(cfg) {
+    var inst = instances.get(cfg.key);
+    if (inst && typeof inst.destroy === "function") {
+      inst.destroy(true, true);
+    }
+    instances.delete(cfg.key);
+  }
+  
+  function enableMobile() { 
+    console.log("[Swiper] enableMobile called");
+    SLIDERS.forEach(function(cfg) {
+      if (!cfg.desktopOnly) {
+        createIfNeeded(cfg);
+      } else {
+        destroyIfExists(cfg);
+      }
+    });
+  }
+  function disableDesktop() { 
+    console.log("[Swiper] disableDesktop called");
+    SLIDERS.forEach(function(cfg) {
+      if (!cfg.desktopOnly) {
+        destroyIfExists(cfg);
+      } else {
+        createIfNeeded(cfg);
+      }
+    });
+  }
+  function applyByViewport() { 
+    console.log("[Swiper] applyByViewport called, isMobile:", mql.matches);
+    if (mql.matches) enableMobile(); else disableDesktop(); 
+  }
+  
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyByViewport, { once: true });
+  } else {
+    applyByViewport();
+  }
+  
+  if (typeof mql.addEventListener === "function") {
+    mql.addEventListener("change", applyByViewport);
+  } else if (typeof mql.addListener === "function") {
+    mql.addListener(applyByViewport);
+  }
+  
+  function initPlanModalSlider() {
+    var planModalCfg = SLIDERS.find(function(cfg) { return cfg.key === "planModal"; });
+    if (!planModalCfg) return;
+    
+    if (instances.has("planModal")) {
+      console.log("[Swiper] planModal already initialized");
+      return;
+    }
+    
+    var el = document.querySelector(planModalCfg.container);
+    if (!el) {
+      console.log("[Swiper] planSliderModal container not found");
+      return;
+    }
+    
+    if (mql.matches) {
+      console.log("[Swiper] planModal - skipping, on mobile");
+      return;
+    }
+    
+    var slides = el.querySelectorAll(".swiper-slide, .swiper-slider, .w-dyn-item, [role='listitem']");
+    var slideCount = slides ? slides.length : 0;
+    console.log("[Swiper] planModal - found", slideCount, "slides");
+    
+    if (slideCount < 3) {
+      console.log("[Swiper] planModal - not enough slides (need 3+)");
+      return;
+    }
+    
+    var wrapper = el.querySelector(".swiper-wrapper");
+    if (!wrapper) {
+      console.log("[Swiper] planModal - swiper-wrapper not found, trying to find wrapper");
+      wrapper = el.querySelector(".plan-list_slider, [role='list']");
+      if (wrapper) {
+        wrapper.classList.add("swiper-wrapper");
+        console.log("[Swiper] planModal - added swiper-wrapper class");
+      } else {
+        console.warn("[Swiper] planModal - wrapper not found");
+        return;
+      }
+    }
+    
+    slides.forEach(function(slide) {
+      if (!slide.classList.contains("swiper-slide") && !slide.classList.contains("swiper-slider")) {
+        slide.classList.add("swiper-slide");
+        console.log("[Swiper] planModal - added swiper-slide class to slide");
+      }
+    });
+    
+    if (planModalCfg.pagination && !document.querySelector(planModalCfg.pagination)) {
+      console.warn("[Swiper] Pagination element not found for planModal.");
+    }
+    
+    console.log("[Swiper] Initializing planModal slider, container:", el, "wrapper:", wrapper, "slides:", slideCount);
+    var swiperOptions = planModalCfg.options || {};
+    console.log("[Swiper] planModal options:", swiperOptions);
+    var instance = new Swiper(el, swiperOptions);
+    instances.set("planModal", instance);
+    console.log("[Swiper] planModal initialized successfully");
+  }
+  
+  window.initPlanModalSlider = initPlanModalSlider;
+  
   applyByViewport();
-}
-
-if (typeof mql.addEventListener === "function") {
-  mql.addEventListener("change", applyByViewport);
-} else if (typeof mql.addListener === "function") {
-  mql.addListener(applyByViewport);
-}
-})();
-
-// jQuery-dependent modal step toggles
-(function initModalToggles() {
-if (!window.jQuery) { 
-  console.warn("[jQuery] Not found on page."); 
-  return; 
-}
-var $ = window.jQuery;
-
-$(document).on('click', '#modalClientButton', function () {
-  $('.modal-step.is--1').fadeOut(200, function () {
-    $('.modal-step.is--2').fadeIn(200);
+  })();
+  
+  // jQuery-dependent modal step toggles
+  (function initModalToggles() {
+  if (!window.jQuery) { 
+    console.warn("[jQuery] Not found on page."); 
+    return; 
+  }
+  var $ = window.jQuery;
+  
+  $(document).on('click', '#modalClientButton', function () {
+    $('.modal-step.is--1').fadeOut(200, function () {
+      $('.modal-step.is--2').fadeIn(200);
+    });
   });
-});
-
-$(document).on('click', '.modal-form-button', function () {
-  $('.modal-step.is--2').fadeOut(200, function () {
-    $('.modal-step.is--1').fadeIn(200);
+  
+  $(document).on('click', '.modal-form-button', function () {
+    $('.modal-step.is--2').fadeOut(200, function () {
+      $('.modal-step.is--1').fadeIn(200);
+    });
   });
-});
-})();
-
-console.log("[UTM] Script loaded and executed");
+  })();
+  
+  console.log("[UTM] Script loaded and executed");
